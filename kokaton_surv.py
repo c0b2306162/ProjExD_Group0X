@@ -46,6 +46,32 @@ class Bird(pg.sprite.Sprite):
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
+def countdown(screen: pg.Surface, font: pg.font.Font):
+    # カウントダウンのテキストと対応する画像を設定
+    countdown_texts = ["3", "2", "1", "Start!"]
+    countdown_images = [
+        pg.image.load("fig/0.png"),  # 3の画像
+        pg.image.load("fig/2.png"),  # 2の画像
+        pg.image.load("fig/3.png"),  # 1の画像
+        pg.image.load("fig/9.png")  # Startの画像
+    ]
+
+    for i, text in enumerate(countdown_texts):
+        screen.fill((0, 0, 0))  # 背景を黒にしてリセット
+        
+        # テキストを描画
+        render_text = font.render(text, True, (255, 255, 255))
+        text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(render_text, text_rect)
+
+        # 対応する画像を描画
+        #image = pg.transform.scale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image = pg.transform.smoothscale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image_rect = image.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))  # 画像の位置を調整
+        screen.blit(image, image_rect)
+
+        pg.display.flip()  # 画面更新
+        time.sleep(0.5)  # 1秒待機
 
 #メイン関数
 def main():
@@ -61,6 +87,9 @@ def main():
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
+
+    countdown_font = pg.font.Font(None, 120)
+    countdown(screen, countdown_font)  # カウントダウンの呼び出し
 
     tmr = 0
     while True:
