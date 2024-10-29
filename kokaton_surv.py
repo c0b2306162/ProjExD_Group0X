@@ -47,6 +47,44 @@ class Bird(pg.sprite.Sprite):
             self.rect.centery += dy * 5
 
 
+class Haikei:
+    """
+    背景に関するクラス
+    """
+    def __init__(self, image_path):
+        self.image = pg.image.load(image_path).convert()
+        self.background_x = 0
+        self.background_y = 0
+
+    def update(self, bird_rect):
+        # 背景の移動量を計算
+        dx, dy = bird_rect.centerx - WIDTH // 2, bird_rect.centery - HEIGHT // 2
+        distance = math.hypot(dx, dy)
+
+        if distance > 0:
+            dx /= distance
+            dy /= distance
+            move_speed = 5
+            self.background_x -= dx * (move_speed / 5)  # 背景の移動を調整
+            self.background_y -= dy * (move_speed / 5)  # 背景の移動を調整
+
+        # 背景の移動に応じた制限
+        if bird_rect.centerx < WIDTH * 0.45:
+            self.background_x += 3  # 左端に近づいたら背景を右に
+        elif bird_rect.centerx > WIDTH * 0.55:
+            self.background_x -= 3  # 右端に近づいたら背景を左に
+
+        if bird_rect.centery < HEIGHT * 0.45:
+            self.background_y += 3  # 上端に近づいたら背景を下に
+        elif bird_rect.centery > HEIGHT * 0.55:
+            self.background_y -= 3  # 下端に近づいたら背景を上に
+
+    def draw(self, screen):
+        # 背景のループ表示
+        for x in range(-100, 100):
+            for y in range(-100, 100):
+                screen.blit(self.image, (x * 1000 + self.background_x, y * 1000 + self.background_y))
+
 #メイン関数
 def main():
     pg.display.set_caption("吸血鬼生存猪")
@@ -54,8 +92,8 @@ def main():
     clock = pg.time.Clock()
     font = pg.font.Font(None, 80)
 
-    # 背景画像の読み込み
-    background_image = pg.image.load('fig/pg_bg.jpg').convert()
+    # 背景クラスのインスタンスを作成
+    haikei = Haikei('fig/haikei.jpg')
 
     bird = Bird(1, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
 
@@ -65,18 +103,18 @@ def main():
     tmr = 0
     while True:
         for event in pg.event.get():
-            if event.type == pg.QUIT: return
+            if event.type == pg.QUIT:
+                return
         
         # マウスの現在位置を取得
         mouse_pos = pg.mouse.get_pos()
         # こうかとんの更新
-        all_sprites.update(mouse_pos)
+        bird.update(mouse_pos)
+        haikei.update(bird.rect)
+
         # 画面の更新
         screen.fill((50, 50, 50))
-        # 背景をループ表示
-        for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
-            screen.blit(background_image, (x, 0))
-        
+        haikei.draw(screen)
         all_sprites.draw(screen)
 
         txt = font.render(str(tmr), True, (255, 255, 255))
@@ -84,7 +122,7 @@ def main():
 
         pg.display.update()
         tmr += 1        
-        clock.tick(60)# FPS:60
+        clock.tick(60)  # FPS:60
 
 
 if __name__ == "__main__":
