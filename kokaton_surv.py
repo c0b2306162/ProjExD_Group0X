@@ -4,8 +4,9 @@ import pygame as pg
 import pyautogui
 import time
 import math
+import random
 
-WIDTH, HEIGHT = 800, 600 
+WIDTH, HEIGHT = 1800, 1000 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Bird(pg.sprite.Sprite):
@@ -19,7 +20,7 @@ class Bird(pg.sprite.Sprite):
         引数2 xy：こうかとん画像の位置座標タプル
         """
         super().__init__()
-        img0 = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 2.0)
+        img0 = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 1.0)
         img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん
         self.imgs = {
             (+1, 0): img,  # 右
@@ -42,21 +43,25 @@ class Bird(pg.sprite.Sprite):
         if distance > 0:
             dx /= distance
             dy /= distance
-            self.rect.centerx += dx * 5  # スピード調整
-            self.rect.centery += dy * 5
+            self.rect.centerx += dx * 7  # スピード調整
+            self.rect.centery += dy * 7
 
 class Enemy(pg.sprite.Sprite):
     """
     敵キャラクターに関するクラス
     """
-    def __init__(self, xy: tuple[int, int]):
+    def __init__(self, num: int, xy: tuple[int, int], stop_distance: int, shoot_interval: int, bullet_speed: int, shoot_pattern: str, bullet_color: tuple, bullet_radius:int, speed:float):
         super().__init__()
-        self.image = pg.transform.rotozoom(pg.image.load("fig/10.png"), 0, 1.0)
+        self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 1.0)
         self.rect = self.image.get_rect(center=xy)
-        self.speed = 2
-        self.stop_distance = 500
+        self.speed = speed
+        self.stop_distance = stop_distance
         self.last_shot_time = 0
-        self.shoot_interval = 400 # ミリ秒単位で発射間隔を設定
+        self.shoot_interval = shoot_interval  # ミリ秒単位で発射間隔を設定
+        self.bullet_speed = bullet_speed  # 弾の速度を設定
+        self.shoot_pattern = shoot_pattern  # 発射パターンを設定
+        self.bullet_color = bullet_color  # 弾の色を設定
+        self.bullet_radius = bullet_radius  #弾の半径を設定
 
     def update(self, target_pos):
         dx = target_pos[0] - self.rect.centerx
@@ -71,31 +76,61 @@ class Enemy(pg.sprite.Sprite):
 
     def shoot(self, target_pos, current_time):
         if current_time - self.last_shot_time > self.shoot_interval:
-            dx = target_pos[0] - self.rect.centerx
-            dy = target_pos[1] - self.rect.centery
-            angle = math.atan2(dy, dx)
-            bullet_dx = math.cos(angle)
-            bullet_dy = math.sin(angle)
-            bullet = Bullet(self.rect.center, (bullet_dx, bullet_dy))
+            bullets = []
+            if self.shoot_pattern == "spread":
+                # 円形に弾を発射
+                for angle in range(0, 360, 10):  # 45度間隔で発射
+                    rad = math.radians(angle)
+                    bullet_dx = math.cos(rad) * self.bullet_speed
+                    bullet_dy = math.sin(rad) * self.bullet_speed
+                    bullets.append(Bullet(self.rect.center, (bullet_dx, bullet_dy), self.bullet_color, self.bullet_radius))
+            elif self.shoot_pattern == "direct":
+                # ターゲットに直進
+                dx = target_pos[0] - self.rect.centerx
+                dy = target_pos[1] - self.rect.centery
+                distance = math.hypot(dx, dy)
+                if distance > 0:
+                    dx /= distance
+                    dy /= distance
+                    bullet_dx = dx * self.bullet_speed
+                    bullet_dy = dy * self.bullet_speed
+                    bullets.append(Bullet(self.rect.center, (bullet_dx, bullet_dy), self.bullet_color, self.bullet_radius))
+            elif self.shoot_pattern == "wave":
+                # ターゲットの方向に波状に弾を発射
+                dx = target_pos[0] - self.rect.centerx
+                dy = target_pos[1] - self.rect.centery
+                base_angle = math.degrees(math.atan2(dy, dx))
+                for angle in range(-30, 31, 15):  # -30度から30度まで15度間隔で発射
+                    rad = math.radians(base_angle + angle)
+                    bullet_dx = math.cos(rad) * self.bullet_speed
+                    bullet_dy = math.sin(rad) * self.bullet_speed
+                    bullets.append(Bullet(self.rect.center, (bullet_dx, bullet_dy), self.bullet_color, self.bullet_radius))
+            elif self.shoot_pattern == "random":
+                # ランダム方向に弾を発射
+                for _ in range(8):  # 8方向にランダム発射
+                    angle = random.uniform(0, 360)
+                    rad = math.radians(angle)
+                    bullet_dx = math.cos(rad) * self.bullet_speed
+                    bullet_dy = math.sin(rad) * self.bullet_speed
+                    bullets.append(Bullet(self.rect.center, (bullet_dx, bullet_dy), self.bullet_color, self.bullet_radius))
             self.last_shot_time = current_time
-            return bullet
-        return None
+            return bullets
+        return []
 
 class Bullet(pg.sprite.Sprite):
     """
     弾に関するクラス
     """
-    def __init__(self, pos, direction):
+    def __init__(self, pos, direction, color, radius):
         super().__init__()
-        self.image = pg.Surface((10, 10))
-        self.image.fill((0, 0, 0))
+        self.image = pg.Surface((radius * 2, radius * 2), pg.SRCALPHA)
+        pg.draw.circle(self.image, color, (radius, radius), radius)
         self.rect = self.image.get_rect(center=pos)
-        self.speed = 5
         self.direction = direction
 
     def update(self):
-        self.rect.x += self.direction[0] * self.speed
-        self.rect.y += self.direction[1] * self.speed
+        self.rect.x += self.direction[0]
+        self.rect.y += self.direction[1]
 
 def main():
     pg.display.set_caption("吸血鬼生存猪")
@@ -107,11 +142,23 @@ def main():
     background_image = pg.image.load('fig/pg_bg.jpg').convert()
 
     bird = Bird(1, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
-    enemy = Enemy((100, 100))
+
+    # 敵の設定リスト
+    enemy_settings = [
+        {"num": 10, "xy": (100, 100), "stop_distance": 0, "shoot_interval": 1000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius":6, "speed":1.342},
+        {"num": 11, "xy": (200, 100), "stop_distance": 0, "shoot_interval": 1200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius":7, "speed":1.000001},
+        {"num": 12, "xy": (300, 100), "stop_distance": 0, "shoot_interval": 3600, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius":8, "speed":1.059},
+        {"num": 13, "xy": (400, 100), "stop_distance": 0, "shoot_interval": 2500, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius":6, "speed":2.0},
+        {"num": 2, "xy": (200, 100), "stop_distance": 0, "shoot_interval": 1200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius":7, "speed":1.67},
+        {"num": 3, "xy": (300, 100), "stop_distance": 0, "shoot_interval": 3600, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius":8, "speed":2.3},
+        {"num": 4, "xy": (400, 100), "stop_distance": 0, "shoot_interval": 2500, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius":6, "speed":1.22},
+    ]
+
+    enemies = [Enemy(**settings) for settings in enemy_settings]
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
-    all_sprites.add(enemy)
+    all_sprites.add(*enemies)
 
     bullets = pg.sprite.Group()
 
@@ -124,15 +171,23 @@ def main():
         mouse_pos = pg.mouse.get_pos()
         # こうかとんの更新
         all_sprites.update(mouse_pos)
-        enemy.update(bird.rect.center)
+        for enemy in enemies:
+            enemy.update(bird.rect.center)
 
-        # 現在の時間を取得
-        current_time = pg.time.get_ticks()
+            # 現在の時間を取得
+            current_time = pg.time.get_ticks()
 
-        # 敵が一定距離に達したら弾を発射
-        bullet = enemy.shoot(bird.rect.center, current_time)
-        if bullet:
-            bullets.add(bullet)
+            # 敵が一定距離に達したら弾を発射
+            new_bullets = enemy.shoot(bird.rect.center, current_time)
+            bullets.add(*new_bullets)
+
+
+        # 敵の数が3以下になったら補充
+        if len(enemies) <= 7:
+            new_enemy_settings = random.choice(enemy_settings)
+            new_enemy = Enemy(**new_enemy_settings)
+            enemies.append(new_enemy)
+            all_sprites.add(new_enemy)
 
         # 弾の更新
         bullets.update()
