@@ -46,6 +46,62 @@ class Bird(pg.sprite.Sprite):
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
+def show_rules(screen: pg.Surface):
+    # フォントを読み込む
+    font_path = "font/ipaexg.ttf"  # プロジェクトフォルダに配置したフォントファイル
+    font = pg.font.Font(font_path, 30)  # フォントサイズ30で指定
+    
+    # ルールテキストを設定
+    rules_texts = [
+        "吸血鬼生存猪のルール説明",
+        "1. マウスを使ってこうかとんを動かします。",
+        "2. 敵に当たらないよう注意して、","得点を獲得しレベルアップしましょう！！",
+        "エンターキーを押してカウントダウンを開始します。"
+    ]
+    
+    # こうかとん画像の読み込みと初期位置設定
+    koukaton_img = pg.image.load("fig/2.png")
+    koukaton_rect = koukaton_img.get_rect(midright=(WIDTH, HEIGHT // 2 - 70))
+
+    # エンターキーが押されるまでループ
+    waiting = True
+    clock = pg.time.Clock()  # フレームレート管理用のクロック
+    blink_timer = 0  # 点滅用のタイマー
+
+    while waiting:
+        screen.fill((0, 0, 0))  # 背景を黒で塗りつぶし
+
+        # 各テキストを描画
+        for i, text in enumerate(rules_texts[:-1]):  # 最後のテキスト以外を表示
+            render_text = font.render(text, True, (255, 255, 255))
+            text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 50))
+            screen.blit(render_text, text_rect)
+
+        # 「エンターキーを押して…」のテキストを点滅させながら表示
+        blink_timer += 1
+        if blink_timer % 60 < 15:  # 点滅の速度を遅くする
+            last_text = font.render(rules_texts[-1], True, (255, 0, 0))
+            last_text_rect = last_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 200))
+            screen.blit(last_text, last_text_rect)
+
+        # こうかとん画像を右から左に高速で移動
+        koukaton_rect.x -= 10
+        if koukaton_rect.right < 0:  # 左端に達したらリセットして右端に戻す
+            koukaton_rect.left = WIDTH
+        screen.blit(koukaton_img, koukaton_rect)
+
+        pg.display.flip()  # 画面更新
+
+        # イベント処理
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                waiting = False
+
+        clock.tick(60)  # フレームレートを60に制限
+
 
 #メイン関数
 def main():
@@ -61,6 +117,8 @@ def main():
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
+
+    show_rules(screen)  # ルール説明の呼び出し
 
     tmr = 0
     while True:
