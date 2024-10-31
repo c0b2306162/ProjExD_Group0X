@@ -1,14 +1,13 @@
 import os
 import sys
 import pygame as pg
-import pyautogui
-import time
-import math
+import pyautogui,time,math,random
 
 WIDTH, HEIGHT = 1800, 1000 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 #以下に機能の追加
+
 
 class Player(pg.sprite.Sprite):
     """
@@ -47,6 +46,7 @@ class Player(pg.sprite.Sprite):
         current_time = pg.time.get_ticks()
         if current_time - self.last_attack_time > self.attack_cooldown:
             self.last_attack_time = current_time
+            
             # ここで一番近い敵を探す
             closest_enemy = None
             closest_distance = float("inf")
@@ -102,12 +102,33 @@ class Bird(pg.sprite.Sprite):
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
+        angle = math.degrees(math.atan2(-dy, dx)) # Y軸反転　→　角度計算
+
+        if -22.5 <= angle < 22.5:
+            direction = (1, 0)          #右
+        elif 22.5 <= angle < 67.5:
+            direction = (1, -1)         #右上
+        elif 67.5 <= angle < 112.5:
+            direction = (0, -1)         #上
+        elif 112.5 <= angle < 157.5:
+            direction = (-1, -1)        #左上
+        elif 157.5 <= angle or angle < -157.5:
+            direction = (-1, 0)         #左
+        elif -157.5 <= angle < -112.5:
+            direction = (-1, 1)         #左下
+        elif -112.5 <= angle < -67.5:
+            direction = (0, 1)          #下
+        elif -67.5 <= angle < -22.5:
+            direction = (1, 1)          #右下   
+
+        self.image = self.imgs[direction]
+        self.rect = self.image.get_rect(center = self.rect.center) # 画像の中心座標を維持
 
 class ExperienceOrb(pg.sprite.Sprite):
     """
     経験値に関するクラス
     """
-    def __init__(self, value, position) -> None:
+    def __init__(self, value, position):
         super().__init__()
         self.value = value
         self.image = pg.Surface((20, 20))
@@ -119,24 +140,40 @@ class Enemy(pg.sprite.Sprite):
     敵に関するクラス
     （他の人が敵のクラスを書くのでこれは仮置き）
     """
-    def __init__(self, name, experience_value, position):
+    def __init__(self, name, experience_value, position, x, y):
         super().__init__()
+        self.x = x
+        self.y = y
         self.name = name
         self.experience_value = experience_value
         self.image = pg.Surface((40, 40))
         self.image.fill((255, 0, 0))  # 赤色の敵
         self.rect = self.image.get_rect(center=position)
-        self.health = 100 # 敵の体力
+        self.hp = 100 # 敵の体力
+        self.enemies = []
 
-    def defeat(self):
+
+    def defeat(self):# 経験値の値を設定
         return ExperienceOrb(self.experience_value, self.rect.center)
     
+    def move_t_player(self, player_pos):
+        dx, dy = player_pos[0] - self.x[0], player_pos[1] - self.y[1]
+        dist = math.hypot(dx, dy)
+        if dist > 0:
+            dx, dy = dx / dist, dy / dist
+            self.x[0] += dx
+            self.y[1] += dy
+
     def take_damage(self, damage):
-        self.health -= damage
-        if self.health <= 0:
+        self.hp -= damage
+        if self.hp <= 0:
             return True  # 敵が倒された
         return False
-    
+
+def spawn_enemy(self):
+    self.x, self.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
+    self.enemies.append(Enemy(self.x, self.y))
+
 class Bullet_ko(pg.sprite.Sprite):
     """
     弾に関するクラス
@@ -164,24 +201,26 @@ def main():
     # 背景画像の読み込み
     background_image = pg.image.load('fig/pg_bg.jpg').convert()
 
-    bird = Bird(1, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
+    bird = Bird(3, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
     player = Player(1)
     
-    #複数敵の生成（他のメンバーが敵を作成しているので仮置き）
-    enemy_group = pg.sprite.Group()
-    for i in range(5):  # 敵を5体生成
-        enemy = Enemy(f"Goblin{i+1}", 50, (WIDTH // 4 + i * 100, HEIGHT // 4))
-        enemy_group.add(enemy)
+    #複数敵の生成（他のメンバーが敵を作成しているので"""仮置き"""）
+    # enemy_group = pg.sprite.Group()
+    # for i in range(5):  # 敵を5体生成
+    #     enemy = Enemy(f"Goblin{i+1}", 50, (WIDTH // 4 + i * 100, HEIGHT // 4))
+    #     enemy_group.add(enemy)
+    if random.randint(0, 30) == 0:
+        spawn_enemy()
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
-    all_sprites.add(enemy_group) # 複数の敵を追加する
+     # 複数の敵を追加する
 
     experience_orbs = pg.sprite.Group() # 経験値玉を格納するためのグループ
     bullets = pg.sprite.Group()  # 弾を格納するためのグループ
 
     last_attack_time = 0
-    attack_interval = 500  # 攻撃間隔（ミリ秒）
+    attack_interval = 1000  # 攻撃間隔（ミリ秒）
     damage = 20  # 弾のダメージ
     
     tmr = 0
@@ -190,13 +229,13 @@ def main():
             if event.type == pg.QUIT: 
                 return
         
-        # 自動で攻撃する
+        # 自動で攻撃する(一定間隔おきに弾を撃つ：味方)
         current_time = pg.time.get_ticks()
         if current_time - last_attack_time > attack_interval:
             # 弾の発射位置と方向を計算
             closest_enemy = None
             closest_distance = float('inf')
-            for enemy in enemy_group:
+            for enemy in spawn_enemy():
                 distance = math.hypot(bird.rect.centerx - enemy.rect.centerx, bird.rect.centery - enemy.rect.centery)
                 if distance < closest_distance:
                     closest_distance = distance
@@ -210,6 +249,15 @@ def main():
                     all_sprites.add(bul)
                     bullets.add(bul)
                     last_attack_time = current_time
+
+        for enemy in enemies[:]:
+            enemy.move_towards_player(player_pos)
+            if enemy.is_dead():
+                enemies.remove(enemy) # type: ignore
+
+        # 敵の定期的な生成
+        if random.randint(0, 30) == 0:
+            spawn_enemy()        
         
         # 弾の更新
         bullets.update()
