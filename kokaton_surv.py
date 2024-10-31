@@ -32,10 +32,11 @@ class Bird(pg.sprite.Sprite):
             (0, +1): pg.transform.rotozoom(img, -90, 1.0),  # 下
             (+1, +1): pg.transform.rotozoom(img, -45, 1.0),  # 右下
         }
-        self.image = self.imgs[(1, 0)] # 初期画像
+        self.image = self.imgs[(1, 0)]  # 初期画像
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 2))  # 初期位置は画面中央に配置
+        self.hp = 100  # Initialize HP
 
-    def update(self, mouse_pos):
+    def update(self, mouse_pos, bullets):
         # マウスの方向に移動
         dx, dy = mouse_pos[0] - self.rect.centerx, mouse_pos[1] - self.rect.centery
         distance = math.hypot(dx, dy)
@@ -45,6 +46,17 @@ class Bird(pg.sprite.Sprite):
             dy /= distance
             self.rect.centerx += dx * 7  # スピード調整
             self.rect.centery += dy * 7
+
+        # Check for collisions with bullets
+        collided_bullet = pg.sprite.spritecollideany(self, bullets)
+        if collided_bullet:
+            self.hp -= 7  # HPを10減らす
+            collided_bullet.kill() # 一回あたったら弾は消滅
+        if self.hp <= 0:
+            self.hp = 0  # HPが0以下になっても0に留める
+            return "gameover"  # gameover表示
+        return "playing"  # クリックでリスタート
+
 
 class Enemy(pg.sprite.Sprite):
     """
@@ -62,6 +74,7 @@ class Enemy(pg.sprite.Sprite):
         self.shoot_pattern = shoot_pattern  # 発射パターンを設定
         self.bullet_color = bullet_color  # 弾の色を設定
         self.bullet_radius = bullet_radius  #弾の半径を設定
+        self.bird_hp = 100  #Hpを100に設定
 
     def update(self, target_pos):
         dx = target_pos[0] - self.rect.centerx
@@ -163,50 +176,82 @@ def main():
     bullets = pg.sprite.Group()
 
     tmr = 0
+    game_state = "playing"  # Track the game state
+
     while True:
         for event in pg.event.get():
-            if event.type == pg.QUIT: return
-        
-        # マウスの現在位置を取得
-        mouse_pos = pg.mouse.get_pos()
-        # こうかとんの更新
-        all_sprites.update(mouse_pos)
-        for enemy in enemies:
-            enemy.update(bird.rect.center)
+            if event.type == pg.QUIT:
+                return
+            if event.type == pg.MOUSEBUTTONDOWN:
+                if game_state == "gameover":
+                    mouse_pos = event.pos
+                    if restart_button.collidepoint(mouse_pos):
+                        main()  # Restart the game
+                    elif quit_button.collidepoint(mouse_pos):
+                        return  # Quit the game
 
-            # 現在の時間を取得
-            current_time = pg.time.get_ticks()
+        if game_state == "playing":
+            # マウスの現在位置を取得
+            mouse_pos = pg.mouse.get_pos()
+            # こうかとんの更新
+            game_state = bird.update(mouse_pos, bullets)  # Update bird and check game state
+            for enemy in enemies:
+                enemy.update(bird.rect.center)
 
-            # 敵が一定距離に達したら弾を発射
-            new_bullets = enemy.shoot(bird.rect.center, current_time)
-            bullets.add(*new_bullets)
+                # 現在の時間を取得
+                current_time = pg.time.get_ticks()
 
+                # 敵が一定距離に達したら弾を発射
+                new_bullets = enemy.shoot(bird.rect.center, current_time)
+                bullets.add(*new_bullets)
 
-        # 敵の数が3以下になったら補充
-        if len(enemies) <= 7:
-            new_enemy_settings = random.choice(enemy_settings)
-            new_enemy = Enemy(**new_enemy_settings)
-            enemies.append(new_enemy)
-            all_sprites.add(new_enemy)
+            # 敵の数が3以下になったら補充
+            if len(enemies) <= 7:
+                new_enemy_settings = random.choice(enemy_settings)
+                new_enemy = Enemy(**new_enemy_settings)
+                enemies.append(new_enemy)
+                all_sprites.add(new_enemy)
 
-        # 弾の更新
-        bullets.update()
+            # 弾の更新
+            bullets.update()
 
-        # 画面の更新
-        screen.fill((50, 50, 50))
-        # 背景をループ表示
-        for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
-            screen.blit(background_image, (x, 0))
-        
-        all_sprites.draw(screen)
-        bullets.draw(screen)
+            # 画面の更新
+            screen.fill((50, 50, 50))
+            # 背景をループ表示
+            for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
+                screen.blit(background_image, (x, 0))
+            
+            all_sprites.draw(screen)
+            bullets.draw(screen)
 
-        txt = font.render(str(tmr), True, (255, 255, 255))
-        screen.blit(txt, [300, 200])
+            # Draw HP
+            hp_text = font.render(f"HP: {bird.hp}", True, (255, 255, 255))
+            screen.blit(hp_text, (10, 10))
+
+            txt = font.render(str(tmr), True, (255, 255, 255))
+            screen.blit(txt, [300, 200])
+
+        elif game_state == "gameover":
+            # Display game over screen
+            gameover_text = font.render("GAME OVER", True, (255, 0, 0))
+            screen.blit(gameover_text, (WIDTH // 2 - 200, HEIGHT // 2 - 40))
+            restart_text = font.render("Restart", True, (255, 255, 255))
+            quit_text = font.render("Quit", True, (255, 255, 255))
+
+            # Define button rectangles
+            restart_button = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 40, 200, 50)
+            quit_button = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50)
+
+            # Draw buttons
+            pg.draw.rect(screen, (0, 255, 0), restart_button)
+            pg.draw.rect(screen, (255, 0, 0), quit_button)
+            screen.blit(restart_text, (WIDTH // 2 - 50, HEIGHT // 2 + 50))
+            screen.blit(quit_text, (WIDTH // 2 - 30, HEIGHT // 2 + 110))
 
         pg.display.update()
         tmr += 1        
-        clock.tick(60)# FPS:60
+        clock.tick(60)  # FPS:60
+
 
 
 if __name__ == "__main__":
