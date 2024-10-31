@@ -157,17 +157,21 @@ def main():
     bird = Bird(1, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
 
     # 敵の設定リスト
-    enemy_settings = [
-        {"num": 10, "xy": (100, 100), "stop_distance": 0, "shoot_interval": 1000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius":6, "speed":1.342},
-        {"num": 11, "xy": (200, 100), "stop_distance": 0, "shoot_interval": 1200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius":7, "speed":1.000001},
-        {"num": 12, "xy": (300, 100), "stop_distance": 0, "shoot_interval": 3600, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius":8, "speed":1.059},
-        {"num": 13, "xy": (400, 100), "stop_distance": 0, "shoot_interval": 2500, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius":6, "speed":2.0},
-        {"num": 2, "xy": (200, 100), "stop_distance": 0, "shoot_interval": 1200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius":7, "speed":1.67},
-        {"num": 3, "xy": (300, 100), "stop_distance": 0, "shoot_interval": 3600, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius":8, "speed":2.3},
-        {"num": 4, "xy": (400, 100), "stop_distance": 0, "shoot_interval": 2500, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius":6, "speed":1.22},
+    base_enemy_settings = [
+        {"num": 10, "stop_distance": 0, "shoot_interval": 10000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342},
+        {"num": 11, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001},
+        {"num": 12, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059},
+        {"num": 13, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0},
+        {"num": 2, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67},
+        {"num": 3, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3},
+        {"num": 4, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22},
     ]
 
-    enemies = [Enemy(**settings) for settings in enemy_settings]
+    enemies = []
+    for i in range(20):  # Generate 20 enemies
+        settings = random.choice(base_enemy_settings).copy()
+        settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
+        enemies.append(Enemy(**settings))
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
@@ -204,13 +208,6 @@ def main():
                 # 敵が一定距離に達したら弾を発射
                 new_bullets = enemy.shoot(bird.rect.center, current_time)
                 bullets.add(*new_bullets)
-
-            # 敵の数が3以下になったら補充
-            if len(enemies) <= 7:
-                new_enemy_settings = random.choice(enemy_settings)
-                new_enemy = Enemy(**new_enemy_settings)
-                enemies.append(new_enemy)
-                all_sprites.add(new_enemy)
 
             # 弾の更新
             bullets.update()
@@ -251,6 +248,7 @@ def main():
         pg.display.update()
         tmr += 1        
         clock.tick(60)  # FPS:60
+
 
 
 
