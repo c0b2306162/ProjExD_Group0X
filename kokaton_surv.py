@@ -34,7 +34,8 @@ class Bird(pg.sprite.Sprite):
         }
         self.image = self.imgs[(1, 0)]  # 初期画像
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 2))  # 初期位置は画面中央に配置
-        self.hp = 100  # Initialize HP
+        self.hp = 100  # HP残量
+        self.xp = 0  # 獲得XP
 
     def update(self, mouse_pos, bullets):
         # マウスの方向に移動
@@ -50,19 +51,25 @@ class Bird(pg.sprite.Sprite):
         # Check for collisions with bullets
         collided_bullet = pg.sprite.spritecollideany(self, bullets)
         if collided_bullet:
-            self.hp -= 7  # HPを10減らす
+            self.hp -= 7  # HPを7減らす
             collided_bullet.kill() # 一回あたったら弾は消滅
         if self.hp <= 0:
             self.hp = 0  # HPが0以下になっても0に留める
             return "gameover"  # gameover表示
         return "playing"  # クリックでリスタート
+    
+    def get_xp(self, amount):
+        self.xp += amount
+        if self.xp >= 100:
+            self.xp -= 100
+            self.hp = 100
 
 
 class Enemy(pg.sprite.Sprite):
     """
     敵キャラクターに関するクラス
     """
-    def __init__(self, num: int, xy: tuple[int, int], stop_distance: int, shoot_interval: int, bullet_speed: int, shoot_pattern: str, bullet_color: tuple, bullet_radius:int, speed:float):
+    def __init__(self, num: int, xy: tuple[int, int], stop_distance: int, shoot_interval: int, bullet_speed: int, shoot_pattern: str, bullet_color: tuple, bullet_radius:int, speed:float, en_hp:int):
         super().__init__()
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 1.0)
         self.rect = self.image.get_rect(center=xy)
@@ -74,7 +81,7 @@ class Enemy(pg.sprite.Sprite):
         self.shoot_pattern = shoot_pattern  # 発射パターンを設定
         self.bullet_color = bullet_color  # 弾の色を設定
         self.bullet_radius = bullet_radius  #弾の半径を設定
-        self.bird_hp = 100  #Hpを100に設定
+        self.en_hp = en_hp  #Hpを設定
 
     def update(self, target_pos):
         dx = target_pos[0] - self.rect.centerx
@@ -86,6 +93,13 @@ class Enemy(pg.sprite.Sprite):
             dy /= distance
             self.rect.centerx += dx * self.speed
             self.rect.centery += dy * self.speed
+    
+    def reduce_hp(self, amount):
+        self.en_hp -= amount
+        if self.en_hp <= 0:
+            self.kill()
+            return True
+        return False
 
     def shoot(self, target_pos, current_time):
         if current_time - self.last_shot_time > self.shoot_interval:
@@ -145,11 +159,26 @@ class Bullet(pg.sprite.Sprite):
         self.rect.x += self.direction[0]
         self.rect.y += self.direction[1]
 
+class Xp():
+    def __init__(self, ):
+        self.font = pg.font.Font(None, 50)
+        self.color = (0, 0, 255)
+        self.value = 0
+        self.image = self.font.render(f"xp: {self.value}", 0, self.color)
+        self.rect = self.image.get_rect()
+        self.rect.center = 100, HEIGHT-100
+
+    def update(self, screen: pg.Surface):
+        self.image = self. font.render(f"xp: {self.value}", 0, self.color)
+        screen.blit(self.image, self.rect)
+
 def main():
     pg.display.set_caption("吸血鬼生存猪")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     clock = pg.time.Clock()
     font = pg.font.Font(None, 80)
+    xp = Xp()
+    
 
     # 背景画像の読み込み
     background_image = pg.image.load('fig/pg_bg.jpg').convert()
@@ -158,13 +187,13 @@ def main():
 
     # 敵の設定リスト
     base_enemy_settings = [
-        {"num": 10, "stop_distance": 0, "shoot_interval": 10000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342},
-        {"num": 11, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001},
-        {"num": 12, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059},
-        {"num": 13, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0},
-        {"num": 2, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67},
-        {"num": 3, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3},
-        {"num": 4, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22},
+        {"num": 10, "stop_distance": 0, "shoot_interval": 10000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp":200},
+        {"num": 11, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp":80},
+        {"num": 12, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp":130},
+        {"num": 13, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp":170},
+        {"num": 2, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp":80},
+        {"num": 3, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp":130},
+        {"num": 4, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp":170},
     ]
 
     enemies = []
@@ -193,6 +222,15 @@ def main():
                         main()  # Restart the game
                     elif quit_button.collidepoint(mouse_pos):
                         return  # Quit the game
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    if enemies:
+                        enemy = enemies[0]
+                        if enemy.reduce_hp(10):
+                            enemies.remove(enemy)
+                            bird.get_xp(50)
+                            xp.value += 50
+                    
 
         if game_state == "playing":
             # マウスの現在位置を取得
@@ -221,7 +259,7 @@ def main():
             all_sprites.draw(screen)
             bullets.draw(screen)
 
-            # Draw HP
+            #  HP
             hp_text = font.render(f"HP: {bird.hp}", True, (255, 255, 255))
             screen.blit(hp_text, (10, 10))
 
@@ -229,22 +267,23 @@ def main():
             screen.blit(txt, [300, 200])
 
         elif game_state == "gameover":
-            # Display game over screen
+            # game over 画面
             gameover_text = font.render("GAME OVER", True, (255, 0, 0))
             screen.blit(gameover_text, (WIDTH // 2 - 200, HEIGHT // 2 - 40))
             restart_text = font.render("Restart", True, (255, 255, 255))
             quit_text = font.render("Quit", True, (255, 255, 255))
 
-            # Define button rectangles
+            # 各ボタン設置
             restart_button = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 40, 200, 50)
             quit_button = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50)
 
-            # Draw buttons
+            # ボタン描画
             pg.draw.rect(screen, (0, 255, 0), restart_button)
             pg.draw.rect(screen, (255, 0, 0), quit_button)
             screen.blit(restart_text, (WIDTH // 2 - 50, HEIGHT // 2 + 50))
             screen.blit(quit_text, (WIDTH // 2 - 30, HEIGHT // 2 + 110))
 
+        xp.update(screen)
         pg.display.update()
         tmr += 1        
         clock.tick(60)  # FPS:60
