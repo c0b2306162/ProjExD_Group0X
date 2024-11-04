@@ -1,7 +1,10 @@
 import os
 import sys
 import pygame as pg
-import pyautogui,time,math,random
+import pyautogui
+import time
+import math
+import random
 
 WIDTH, HEIGHT = 1800, 1000 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +45,7 @@ class Player(pg.sprite.Sprite):
             print(f"レベルアップ! 現在のレベル: {self.level}")
             self.experience_threshold = int(self.experience_threshold * self.level_up_multiplier)
    
-    def attack(self, enemy_group): # 攻撃を判定する関数
+    def attack(self, enemy_group, bullets): # 攻撃を判定する関数
         current_time = pg.time.get_ticks()
         if current_time - self.last_attack_time > self.attack_cooldown:
             self.last_attack_time = current_time
@@ -52,19 +55,28 @@ class Player(pg.sprite.Sprite):
             closest_distance = float("inf")
             # 弾を撃つ処理
             for enemy in enemy_group:
+                """
                 distanceX = self.rect.centerx - enemy.rect.centerx
                 distanceY = self.rect.centery - enemy.rect.centery
                 total_distance = math.hypot(distanceX, distanceY)
-                if total_distance < closest_distance:
-                    closest_distance = total_distance
+                """
+                distance = math.hypot(self.rect.centerx - enemy.rect.centerx, self.rect.centery - enemy.rect.centery)
+                if distance < closest_distance:
+                    closest_distance = distance
                     closest_enemy = enemy
 
              # 近い敵に攻撃
             if closest_enemy:
                 # 弾を撃つ処理
+                dx, dy = closest_enemy.rect.centerx - self.rect.centerx, closest_enemy.rect.centery - self.rect.centery
+                distance = math.hypot(dx, dy)
                 if closest_enemy.rect.colliderect(self.rect):  # ダメージを与えた場合:
                     closest_enemy.defeat()
                     return True
+                if distance > 0:
+                    direction = (dx / distance, dy / distance)
+                    bullet = Bullet_ko(self.rect.center, direction)
+                    bullets.add(bullet)
                 
 class Bird(pg.sprite.Sprite):
     """
@@ -94,11 +106,11 @@ class Bird(pg.sprite.Sprite):
 
     def update(self, mousu_pos):
         # マウスの方向に移動
+        mousu_pos = pg.mouse.get_pos()
         dx, dy = mousu_pos[0] - self.rect.centerx, mousu_pos[1] - self.rect.centery
         distance = math.hypot(dx, dy)
         if distance > 0:
-            dx /= distance
-            dy /= distance
+            dx, dy = dx / distance, dy / distance
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
@@ -157,12 +169,13 @@ class Enemy(pg.sprite.Sprite):
         return ExperienceOrb(self.experience_value, self.rect.center)
     
     def move_t_player(self, player_pos):
-        dx, dy = player_pos[0] - self.x[0], player_pos[1] - self.y[1]
+        dx, dy = player_pos[0] - self.rect.centerx, player_pos[1] - self.rect.centery
         dist = math.hypot(dx, dy)
         if dist > 0:
             dx, dy = dx / dist, dy / dist
-            self.x[0] += dx
-            self.y[1] += dy
+            self.rect.centerx += dx * 2  # 速度調整
+            self.rect.centery += dy * 2
+
 
     def take_damage(self, damage):
         self.hp -= damage
@@ -170,9 +183,12 @@ class Enemy(pg.sprite.Sprite):
             return True  # 敵が倒された
         return False
 
-def spawn_enemy(self):
-    self.x, self.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
-    self.enemies.append(Enemy(self.x, self.y))
+def spawn_enemy(enemies):#self):
+    #self.x, self.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
+    #self.enemies.append(Enemy(self.x, self.y))
+    x, y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
+    enemy = Enemy("Goblin", 50, (x, y), x, y)
+    enemies.append(enemy)
 
 class Bullet_ko(pg.sprite.Sprite):
     """
@@ -192,6 +208,7 @@ class Bullet_ko(pg.sprite.Sprite):
 
 
 #メイン関数-------------------------------------------------------------------------------------
+# メイン関数内でマウスの位置を取得し、updateメソッドに渡すように変更
 def main():
     pg.display.set_caption("吸血鬼生存猪")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -202,104 +219,66 @@ def main():
     background_image = pg.image.load('fig/pg_bg.jpg').convert()
 
     bird = Bird(3, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
-    player = Player(1)
+    player = Player(3)
     
-    #複数敵の生成（他のメンバーが敵を作成しているので"""仮置き"""）
-    # enemy_group = pg.sprite.Group()
-    # for i in range(5):  # 敵を5体生成
-    #     enemy = Enemy(f"Goblin{i+1}", 50, (WIDTH // 4 + i * 100, HEIGHT // 4))
-    #     enemy_group.add(enemy)
-    if random.randint(0, 30) == 0:
-        spawn_enemy()
+    enemies = []  # 敵のリスト
+    enemy_group = pg.sprite.Group()  # Pygameのスプライトグループ
+    all_sprites = pg.sprite.Group(bird)  # 全スプライト
 
-    all_sprites = pg.sprite.Group()
-    all_sprites.add(bird)
-     # 複数の敵を追加する
-
-    experience_orbs = pg.sprite.Group() # 経験値玉を格納するためのグループ
-    bullets = pg.sprite.Group()  # 弾を格納するためのグループ
-
+    # その他の初期化
+    experience_orbs = pg.sprite.Group()
+    bullets = pg.sprite.Group()
     last_attack_time = 0
-    attack_interval = 1000  # 攻撃間隔（ミリ秒）
-    damage = 20  # 弾のダメージ
-    
+    attack_interval = 1000
+    damage = 20
     tmr = 0
+    
     while True:
         for event in pg.event.get():
-            if event.type == pg.QUIT: 
+            if event.type == pg.QUIT:
                 return
-        
-        # 自動で攻撃する(一定間隔おきに弾を撃つ：味方)
-        current_time = pg.time.get_ticks()
-        if current_time - last_attack_time > attack_interval:
-            # 弾の発射位置と方向を計算
-            closest_enemy = None
-            closest_distance = float('inf')
-            for enemy in spawn_enemy():
-                distance = math.hypot(bird.rect.centerx - enemy.rect.centerx, bird.rect.centery - enemy.rect.centery)
-                if distance < closest_distance:
-                    closest_distance = distance
-                    closest_enemy = enemy
-            if closest_enemy:
-                dir = (closest_enemy.rect.centerx - bird.rect.centerx, closest_enemy.rect.centery - bird.rect.centery)
-                distance = math.hypot(*dir)
-                if distance > 0:
-                    dir = (dir[0] / distance, dir[1] / distance)
-                    bul = Bullet_ko(bird.rect.center, dir)
-                    all_sprites.add(bul)
-                    bullets.add(bul)
-                    last_attack_time = current_time
 
-        for enemy in enemies[:]:
-            enemy.move_towards_player(player_pos)
-            if enemy.is_dead():
-                enemies.remove(enemy) # type: ignore
+        #マウス位置の取得
+        mousu_pos = pg.mouse.get_pos()
 
-        # 敵の定期的な生成
         if random.randint(0, 30) == 0:
-            spawn_enemy()        
-        
-        # 弾の更新
-        bullets.update()
+            spawn_enemy(enemies)
 
-        # 弾が敵に当たった場合の処理
-        for bul in bullets:
+        player_pos = player.rect.center
+        for enemy in enemies:
+            enemy.move_t_player(player_pos)
+            enemy_group.add(enemy)
+
+        player.attack(enemy_group, bullets)
+        player.update(pg.mouse.get_pos())
+
+        for bullet in bullets:
             for enemy in enemy_group:
-                if bul.rect.colliderect(enemy.rect):
-                    if enemy.take_damage(damage):
-                        orb = enemy.defeat()
-                        if orb:
-                            experience_orbs.add(orb)
-                    bullets.remove(bul)
-                    all_sprites.remove(bul)
+                if bullet.rect.colliderect(enemy.rect):
+                    if enemy.take_damage(20):
+                        experience_orb = enemy.defeat()
+                        experience_orbs.add(experience_orb)
+                        enemy_group.remove(enemy)
+                    bullets.remove(bullet)
+                    break
 
-        # マウスの現在位置を取得
-        mouse_pos = pg.mouse.get_pos()
-        # こうかとんの更新
-        bird.update(mouse_pos)
-
-
-        # 経験値玉を拾ったときの処理
-        for orb in experience_orbs:
-            if bird.rect.colliderect(orb.rect):
-                player.collect_experience(orb)
-                experience_orbs.remove(orb)
-        
-        # 画面の更新
         screen.fill((50, 50, 50))
-        # 背景をループ表示
         for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
             screen.blit(background_image, (x, 0))
         
+        #"bird.update"を呼び出して、マウス位置を渡す
+        bird.update(mousu_pos)
+
+        all_sprites = pg.sprite.Group(player, *enemies, *bullets)
         all_sprites.draw(screen)
-        experience_orbs.draw(screen)  # 経験値玉を描画
+        experience_orbs.draw(screen)
 
         txt = font.render(f"Level: {player.level}, Exp: {player.experience}", True, (255, 255, 255))
         screen.blit(txt, [300, 200])
 
         pg.display.update()
-        tmr += 1        
-        clock.tick(60)# FPS:60
+        clock.tick(60)
+
 
 
 if __name__ == "__main__":
