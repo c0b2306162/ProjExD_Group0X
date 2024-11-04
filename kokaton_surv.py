@@ -12,8 +12,8 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 class Bird(pg.sprite.Sprite):
     def __init__(self, num: int, xy: tuple[int, int]):
         """
-        引数１ num：こうかとん画像ファイル名の番号
-        引数２ xy：こうかとん画像の位置座標タプル
+        引数１ num:こうかとん画像ファイル名の番号
+        引数２ xy:こうかとん画像の位置座標タプル
         """
         super().__init__()
         img = pg.image.load(f"fig/{num}.png")
@@ -21,6 +21,8 @@ class Bird(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=xy)
         self.speed = 5
         self.exp = 0  # 経験値
+        self.hp = 50  # 主人公のHP
+
 
     def update(self, target):
         dx, dy = target[0] - self.rect.centerx, target[1] - self.rect.centery
@@ -33,6 +35,14 @@ class Bird(pg.sprite.Sprite):
     def gain_exp(self, value):
         self.exp += value
         print(f"経験値: {self.exp}")
+    
+    def take_damage(self):
+        # 敵と接近した時にダメージを受ける処理
+        self.hp -= 1
+        print(f"hp:{self.hp}")
+        if self.hp <= 0:
+            print("Game Over")
+            self.kill()
 
 class Enemy(pg.sprite.Sprite):
     def __init__(self, xy: tuple[int, int]):
@@ -61,19 +71,23 @@ class Enemy(pg.sprite.Sprite):
 class Bullet(pg.sprite.Sprite):
     def __init__(self, pos, target_pos):
         super().__init__()
-        self.image = pg.Surface((10, 10), pg.SRCALPHA)
+        self.image = pg.Surface((10, 10), pg.SRCALPHA) 
         pg.draw.circle(self.image, (0, 255, 255), (5, 5), 5)
-        self.rect = self.image.get_rect(center=pos)
-        dx, dy = target_pos[0] - pos[0], target_pos[1] - pos[1]
-        distance = math.hypot(dx, dy)
+        self.rect = self.image.get_rect(center=pos) # 弾の初期位置を設定
+        # 弾の移動速度と方向の計算
+        dx, dy = target_pos[0] - pos[0], target_pos[1] - pos[1] # ターゲットへの距離
+        distance = math.hypot(dx, dy) # ターゲットまでの直線距離（ユークリッド距離）
         self.speed = 10
+        # 正規化して速度ベクトルを求める
         self.velocity = (dx / distance * self.speed, dy / distance * self.speed)
 
     def update(self):
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]
+        # 弾の位置更新（速度ベクトルに従って直進）
+        self.rect.x += self.velocity[0] #0:x方向の移動量を設定
+        self.rect.y += self.velocity[1] #1:y方向の移動量を設定
+        # 画面外に出た弾を削除
         if not (0 <= self.rect.x <= WIDTH and 0 <= self.rect.y <= HEIGHT):
-            self.kill()
+            self.kill() #spriteグループから削除
 
 class ExpOrb(pg.sprite.Sprite):
     def __init__(self, pos):
@@ -116,9 +130,10 @@ def main():
     pg.display.set_caption("吸血鬼生存猪")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     clock = pg.time.Clock()
+    font = pg.font.Font(None, 36)
 
     # プレイヤーと敵の初期化
-    bird = Bird(1, (WIDTH // 2, HEIGHT // 2))
+    bird = Bird(3, (WIDTH // 2, HEIGHT // 2))
     enemies = pg.sprite.Group(Enemy((random.randint(0, WIDTH), random.randint(0, HEIGHT))) for _ in range(5))
     bullets = pg.sprite.Group()
     exp_orbs = pg.sprite.Group()
@@ -127,46 +142,72 @@ def main():
     enemy_manager = EnemyManager(all_sprites, enemies)
 
     bullet_timer = 0
+    game_over = False  # ゲームオーバー状態のフラグ
+    game_over_time = 0  # ゲームオーバー時刻
+
 
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
 
-        # 1番近い敵を探す
-        if enemies:
-            closest_enemy = min(enemies, key=lambda e: math.hypot(e.rect.centerx - bird.rect.centerx, e.rect.centery - bird.rect.centery))
-            if bullet_timer <= 0:
-                bullet = Bullet(bird.rect.center, closest_enemy.rect.center)
-                bullets.add(bullet)
-                all_sprites.add(bullet)
-                bullet_timer = 30  # 弾発射の間隔（フレーム）
+        if not game_over:
+            # 1番近い敵を探す
+            if enemies:
+                closest_enemy = min(enemies, key=lambda e: math.hypot(e.rect.centerx - bird.rect.centerx, e.rect.centery - bird.rect.centery))
+                if bullet_timer <= 0:
+                    bullet = Bullet(bird.rect.center, closest_enemy.rect.center)
+                    bullets.add(bullet)
+                    all_sprites.add(bullet)
+                    bullet_timer = 30  # 弾発射の間隔フレーム
 
-        # 弾と敵の衝突判定
-        for bullet in pg.sprite.groupcollide(bullets, enemies, True, False).keys():
-            orb = closest_enemy.hit()
-            if orb:
-                exp_orbs.add(orb)
-                all_sprites.add(orb)
-                enemy_manager.schedule_respawn()
+            # 弾と敵の衝突判定
+            for bullet in pg.sprite.groupcollide(bullets, enemies, True, False).keys():
+                orb = closest_enemy.hit()
+                if orb:
+                    exp_orbs.add(orb)
+                    all_sprites.add(orb)
+                    enemy_manager.schedule_respawn()
 
 
-        # 経験値玉と主人公の衝突判定
-        for orb in pg.sprite.spritecollide(bird, exp_orbs, True):
-            bird.gain_exp(orb.value)
+            # 経験値玉と主人公の衝突判定
+            for orb in pg.sprite.spritecollide(bird, exp_orbs, True):
+                bird.gain_exp(orb.value)
+    
+            # 主人公が敵に接触した時ときのダメージ
+            if pg.sprite.spritecollide(bird, enemies, False):
+                bird.take_damage()
+                if bird.hp <= 0:
+                    game_over = True
+                    game_over_time = pg.time.get_ticks()  # ゲームオーバー時刻を記録
 
-        # 更新処理
-        mouse_pos = pg.mouse.get_pos()
-        bird.update(mouse_pos)
-        enemies.update(bird.rect.center)
-        bullets.update()
-        enemy_manager.update()
-        
-        bullet_timer -= 1
+            # 更新処理
+            mouse_pos = pg.mouse.get_pos()
+            bird.update(mouse_pos)
+            enemies.update(bird.rect.center)
+            bullets.update()
+            enemy_manager.update()
+            
+            bullet_timer -= 1
 
         # 画面更新
         screen.fill((30, 30, 30))
         all_sprites.draw(screen)
+
+        # HPと経験値の表示
+        hp_text = font.render(f"HP: {bird.hp}", True, (255, 255, 255))
+        exp_text = font.render(f"EXP: {bird.exp}", True, (255, 255, 255))
+        screen.blit(hp_text, (10, 10))
+        screen.blit(exp_text, (10, 50))
+
+        #ゲームオーバー画面の処理
+        if game_over:
+            game_over_text = font.render("Game Over", True, (255, 0, 0))
+            screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2))
+            if pg.time.get_ticks() - game_over_time > 3000:  # 3秒経過したらゲーム終了
+                pg.quit()
+                sys.exit()
+
         pg.display.update()
         clock.tick(60)
 
