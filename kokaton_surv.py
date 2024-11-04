@@ -204,13 +204,17 @@ def main():
     for i in range(20):  # Generate 20 enemies
         settings = random.choice(base_enemy_settings).copy()
         settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT))
-        enemies.append(Enemy(**settings))
+        enemy = Enemy(**settings)
+        enemy.last_shot_time = pg.time.get_ticks()  # 生成時の現在時間で初期化
+        enemies.append(enemy)
 
     all_sprites = pg.sprite.Group()
     all_sprites.add(bird)
     all_sprites.add(*enemies)
 
     bullets = pg.sprite.Group()
+
+    start_time = pg.time.get_ticks()
 
     tmr = 0
     game_state = "playing"  # Track the game state
@@ -254,6 +258,10 @@ def main():
             # 弾の更新
             bullets.update()
 
+            bullets.update() # 経過時間の計算 
+            elapsed_time = (pg.time.get_ticks() - start_time) / 1000 # 秒単位に変換 
+            time_text = font.render(f"Time: {elapsed_time:.2f}", True, (255, 255, 255))
+
             # 画面の更新
             screen.fill((50, 50, 50))
             # 背景をループ表示
@@ -262,6 +270,7 @@ def main():
             
             all_sprites.draw(screen)
             bullets.draw(screen)
+            screen.blit(time_text, (10, 50))
 
             #  HP
             hp_text = font.render(f"HP: {bird.hp}", True, (255, 255, 255))
