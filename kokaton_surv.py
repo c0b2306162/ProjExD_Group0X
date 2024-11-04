@@ -63,6 +63,7 @@ class Bird(pg.sprite.Sprite):
         if self.xp >= 100:
             self.xp -= 100
             self.hp = 100
+            
 
 
 class Enemy(pg.sprite.Sprite):
@@ -159,18 +160,21 @@ class Bullet(pg.sprite.Sprite):
         self.rect.x += self.direction[0]
         self.rect.y += self.direction[1]
 
+import pygame as pg
+
 class Xp():
-    def __init__(self, ):
-        self.font = pg.font.Font(None, 50)
-        self.color = (0, 0, 255)
+    def __init__(self):
+        self.font = pg.font.Font(None, 80)  # Use a custom game-like font
+        self.color = (255, 255, 255)
         self.value = 0
         self.image = self.font.render(f"xp: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
-        self.rect.center = 100, HEIGHT-100
+        self.rect.topleft = (240, 10)  # Set position to the top-left corner
 
     def update(self, screen: pg.Surface):
-        self.image = self. font.render(f"xp: {self.value}", 0, self.color)
+        self.image = self.font.render(f"xp: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
+
 
 def main():
     pg.display.set_caption("吸血鬼生存猪")
@@ -181,19 +185,19 @@ def main():
     
 
     # 背景画像の読み込み
-    background_image = pg.image.load('fig/pg_bg.jpg').convert()
+    #background_image = pg.image.load('fig/pg_bg.jpg').convert()
 
     bird = Bird(1, (WIDTH // 2, HEIGHT // 2))  # 1はファイル名に対応
 
     # 敵の設定リスト
     base_enemy_settings = [
-        {"num": 10, "stop_distance": 0, "shoot_interval": 10000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp":200},
-        {"num": 11, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp":80},
-        {"num": 12, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp":130},
-        {"num": 13, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp":170},
-        {"num": 2, "stop_distance": 0, "shoot_interval": 12000, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp":80},
-        {"num": 3, "stop_distance": 0, "shoot_interval": 36000, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp":130},
-        {"num": 4, "stop_distance": 0, "shoot_interval": 25000, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp":170},
+        {"num": 10, "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp":200},
+        {"num": 11, "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp":80},
+        {"num": 12, "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp":130},
+        {"num": 13, "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp":170},
+        {"num": 11, "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp":80},
+        {"num": 12, "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp":130},
+        {"num": 13, "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp":170},
     ]
 
     enemies = []
@@ -253,8 +257,8 @@ def main():
             # 画面の更新
             screen.fill((50, 50, 50))
             # 背景をループ表示
-            for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
-                screen.blit(background_image, (x, 0))
+            # for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
+            #     screen.blit(background_image, (x, 0))
             
             all_sprites.draw(screen)
             bullets.draw(screen)
@@ -270,6 +274,7 @@ def main():
             # game over 画面
             gameover_text = font.render("GAME OVER", True, (255, 0, 0))
             screen.blit(gameover_text, (WIDTH // 2 - 200, HEIGHT // 2 - 40))
+
             restart_text = font.render("Restart", True, (255, 255, 255))
             quit_text = font.render("Quit", True, (255, 255, 255))
 
@@ -280,8 +285,14 @@ def main():
             # ボタン描画
             pg.draw.rect(screen, (0, 255, 0), restart_button)
             pg.draw.rect(screen, (255, 0, 0), quit_button)
-            screen.blit(restart_text, (WIDTH // 2 - 50, HEIGHT // 2 + 50))
-            screen.blit(quit_text, (WIDTH // 2 - 30, HEIGHT // 2 + 110))
+
+            # テキストをボタン中央に描画する
+            restart_text_rect = restart_text.get_rect(center=restart_button.center)
+            quit_text_rect = quit_text.get_rect(center=quit_button.center)
+
+            screen.blit(restart_text, restart_text_rect.topleft)
+            screen.blit(quit_text, quit_text_rect.topleft)
+
 
         xp.update(screen)
         pg.display.update()
