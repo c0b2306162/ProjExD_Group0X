@@ -17,20 +17,63 @@ class Bird(pg.sprite.Sprite):
         """
         super().__init__()
         img = pg.image.load(f"fig/{num}.png")
-        self.image = pg.transform.scale(img, (60, 60))
+        img0 = pg.transform.flip(img, True, False)
+        self.original_image = pg.transform.scale(img, (60, 60))
+        self.image = self.original_image
         self.rect = self.image.get_rect(center=xy)
         self.speed = 5
-        self.exp = 0  # 経験値
+        self.exp = 0
         self.hp = 50  # 主人公のHP
+        self.imgs = {
+            (1,   0): img0,  # 右
+            (1,  -1): pg.transform.rotozoom(img0, 45, 1.0),  # 右上
+            (0,  -1): pg.transform.rotozoom(img0, 90, 1.0),  # 上
+            (-1, -1): pg.transform.rotozoom(img, -45, 1.0),  # 左上
+            (-1,  0): img,  # 左
+            (-1,  1): pg.transform.rotozoom(img, 45, 1.0),  # 左下
+            (0,   1): pg.transform.rotozoom(img0, -90, 1.0),  # 下
+            (1,   1): pg.transform.rotozoom(img0, -45, 1.0),  # 右下
+        }
+        self.image = self.imgs[(1, 0)] # 初期画像
 
 
-    def update(self, target):
-        dx, dy = target[0] - self.rect.centerx, target[1] - self.rect.centery
+    def update(self, mousu_pos):
+        # dx, dy = mousu_pos[0] - self.rect.centerx, mousu_pos[1] - self.rect.centery
+        # distance = math.hypot(dx, dy)
+        # if distance > 0:
+        #     dx, dy = dx / distance, dy / distance
+        #     self.rect.centerx += dx * self.speed
+        #     self.rect.centery += dy * self.speed
+        # マウスの方向に移動
+        mousu_pos = pg.mouse.get_pos()
+        dx, dy = mousu_pos[0] - self.rect.centerx, mousu_pos[1] - self.rect.centery
         distance = math.hypot(dx, dy)
         if distance > 0:
             dx, dy = dx / distance, dy / distance
-            self.rect.centerx += dx * self.speed
-            self.rect.centery += dy * self.speed
+            self.rect.centerx += dx * 5  # スピード調整
+            self.rect.centery += dy * 5
+
+        angle = math.degrees(math.atan2(-dy, dx)) # Y軸反転　→　角度計算
+
+        if -22.5 <= angle < 22.5:
+            direction = (1, 0)          #右
+        elif 22.5 <= angle < 67.5:
+            direction = (1, -1)         #右上
+        elif 67.5 <= angle < 112.5:
+            direction = (0, -1)         #上
+        elif 112.5 <= angle < 157.5:
+            direction = (-1, -1)        #左上
+        elif 157.5 <= angle or angle < -157.5:
+            direction = (-1, 0)         #左
+        elif -157.5 <= angle < -112.5:
+            direction = (-1, 1)         #左下
+        elif -112.5 <= angle < -67.5:
+            direction = (0, 1)          #下
+        elif -67.5 <= angle < -22.5:
+            direction = (1, 1)          #右下   
+
+        self.image = self.imgs[direction]
+        self.rect = self.image.get_rect(center = self.rect.center) # 画像の中心座標を維持
 
     def gain_exp(self, value):
         self.exp += value
@@ -204,7 +247,7 @@ def main():
         if game_over:
             game_over_text = font.render("Game Over", True, (255, 0, 0))
             screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2))
-            if pg.time.get_ticks() - game_over_time > 3000:  # 3秒経過したらゲーム終了
+            if pg.time.get_ticks() - game_over_time > 2000:  # 2秒経過したらゲーム終了
                 pg.quit()
                 sys.exit()
 
