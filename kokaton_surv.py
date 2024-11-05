@@ -3,9 +3,11 @@ import sys
 import pygame as pg
 import random
 import math
+import time
+import colorsys
 
 # ゲームの初期設定
-WIDTH, HEIGHT = 1400, 800
+WIDTH, HEIGHT = 1200, 600
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # ゲームキャラクター（主人公、敵、弾、経験値）に関するクラス
@@ -132,7 +134,7 @@ class Enemy(pg.sprite.Sprite):
         return False
     
     def hit(self):
-        self.en_hp -= 1
+        self.en_hp -= Bullet.default_damage
         if self.en_hp <= 0:
             self.kill()
             return ExpOrb(self.rect.center)
@@ -200,11 +202,13 @@ class En_Bullet(pg.sprite.Sprite):
 
 # こうかとんの攻撃方法を管理するクラス
 class Bullet(pg.sprite.Sprite):
+    default_damage = 10
     def __init__(self, pos, target_pos) -> None:
         super().__init__()
         self.image = pg.Surface((10, 10), pg.SRCALPHA) 
         pg.draw.circle(self.image, (0, 255, 255), (5, 5), 5)
         self.rect = self.image.get_rect(center=pos)  # 弾の初期位置を設定
+        self.damage = Bullet.default_damage
 
         # ターゲットへの距離の計算
         dx, dy = target_pos[0] - pos[0], target_pos[1] - pos[1]
@@ -236,38 +240,10 @@ class ExpOrb(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
         self.value = 10
 
-#敵の再出現を管理するクラス
-# class EnemyManager:
-#     def __init__(self, all_sprites, enemies, respawn_time=300) -> None:
-#         self.all_sprites = all_sprites
-#         self.enemies = enemies
-#         self.respawn_time = respawn_time #　復活するまでのフレーム数
-#         self.respawn_timer = []
-
-#     def update(self):
-#         #敵の再出現を管理
-#         for idx, timer in enumerate(self.respawn_timer):
-#             self.respawn_timer[idx] -= 1
-#             if self.respawn_timer[idx] <= 0:
-#                 self.respawn_timer.pop(idx)
-#                 self.spawn_enemy()
-#         #敵の数を5～7体に保つ
-#         if len(self.enemies) < 5:
-#             self.spawn_enemy()
-
-    # def spawn_enemy(self):
-    #     enemy = Enemy((random.randint(0, WIDTH), random.randint(0, HEIGHT)))
-    #     self.enemies.add(enemy)
-    #     self.all_sprites.add(enemy)
-
-    # def schedule_respawn(self):
-    #     if len(self.enemies) < 7:
-    #         self.respawn_timer.append(self.respawn_time)
-
 class Xp():
     def __init__(self, value =0):
         self.font = pg.font.Font(None, 80)  # Use a custom game-like font
-        self.color = (255, 255, 255)
+        self.color = (0, 0, 139)
         self.value = value
         self.image = self.font.render(f"xp: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
@@ -278,6 +254,162 @@ class Xp():
         screen.blit(self.image, self.rect)
 
 # ゲームのメインループ
+#背景を無限生成
+class Haikei:
+    """
+    背景に関するクラス
+    """
+    def __init__(self, image_path):
+        """
+        背景画像の読み込み
+        初期位置の設定
+        """
+        self.image = pg.image.load(image_path).convert()
+        self.background_width, self.background_height = self.image.get_size()
+        self.background_x = 0
+        self.background_y = 0
+
+    def update(self, bird_rect):
+        # 背景の移動量を計算
+        dx, dy = bird_rect.centerx - WIDTH // 2, bird_rect.centery - HEIGHT // 2
+        self.background_x -= dx * 0.015  # 0.1は移動のスムーズさを調整する係数
+        self.background_y -= dy * 0.015
+
+    def draw(self, screen):
+        # キャラクター周辺の背景を無限に繰り返し表示
+        offset_x = self.background_x % self.background_width
+        offset_y = self.background_y % self.background_height
+
+        # 背景をタイル状に配置し、キャラクターの周囲に表示
+        start_x = int(-self.background_width + offset_x)
+        start_y = int(-self.background_height + offset_y)
+
+        for x in range(start_x, WIDTH, self.background_width):
+            for y in range(start_y, HEIGHT, self.background_height):
+                screen.blit(self.image, (x, y))
+
+def countdown(screen: pg.Surface, font: pg.font.Font):
+    # カウントダウンのテキストと対応する画像を設定
+    countdown_texts = ["3", "2", "1", "Start!"]
+    countdown_images = [
+        pg.image.load("fig/0.png"),  # 3の画像
+        pg.image.load("fig/2.png"),  # 2の画像
+        pg.image.load("fig/3.png"),  # 1の画像
+        pg.image.load("fig/9.png")  # Startの画像
+    ]
+
+    for i, text in enumerate(countdown_texts):
+        screen.fill((0, 0, 0))  # 背景を黒にしてリセット
+        
+        # テキストを描画
+        render_text = font.render(text, True, (255, 255, 255))
+        text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(render_text, text_rect)
+
+        # 対応する画像を描画
+        #image = pg.transform.scale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image = pg.transform.smoothscale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image_rect = image.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))  # 画像の位置を調整
+        screen.blit(image, image_rect)
+
+        pg.display.flip()  # 画面更新
+        time.sleep(0.5)  # 1秒待機
+def rainbow_color(index, max_index):
+    """虹色のカラーを取得する関数"""
+    hue = index / max_index
+    r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
+    return (r, g, b)
+
+def show_rules(screen: pg.Surface):
+    # BGM
+    pg.mixer.music.load("setumei.mp3")
+    pg.mixer.music.set_volume(0.5)  # 音量を50%に設定
+    pg.mixer.music.play(-1)  # ループ再生
+
+    # フォントを読み込む
+    font_path = "font/ipaexg.ttf"  # プロジェクトフォルダに配置したフォントファイル
+    font = pg.font.Font(font_path, 30)  # フォントサイズ30で指定
+    
+    # ルールテキストを設定
+    rules_texts = [
+        "吸血鬼生存猪のルール説明",
+        "1. マウスを使ってこうかとんを動かします。",
+        "2. 敵に当たらないよう注意して、", 
+        "経験値を獲得しましょう！！",
+        "エンターキーを押してカウントダウンを開始します。"  # 最後のテキスト
+    ]
+    
+    # こうかとん画像の読み込みと初期位置設定
+    koukaton_img = pg.image.load("fig/2.png")
+    koukaton_rect = koukaton_img.get_rect(midright=(WIDTH, HEIGHT // 2 - 100))  # 少し上に調整
+
+    # エンターキーが押されるまでループ
+    waiting = True
+    clock = pg.time.Clock()  # フレームレート管理用のクロック
+    blink_timer = 0  # 点滅用のタイマー
+    timeout_start = pg.time.get_ticks()  # 開始時刻の取得
+
+    while waiting:
+        screen.fill((255, 180, 100))  
+
+        # 各テキストを虹色で描画
+        for i, text in enumerate(rules_texts[:-1]):  # 最後のテキスト以外を表示
+            color = rainbow_color(i, len(rules_texts) - 1)
+            render_text = font.render(text, True, color)
+            text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 50))
+            screen.blit(render_text, text_rect)
+
+        # 点滅するテキストの処理
+        blink_timer += 1
+        if blink_timer % 60 < 30:  # 60フレームごとに15フレーム点灯
+            last_text = rules_texts[-1]
+            last_color = (255, 0, 0)  # 赤色
+            render_last_text = font.render(last_text, True, last_color)
+            last_text_rect = render_last_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + (len(rules_texts) - 1) * 50))
+            screen.blit(render_last_text, last_text_rect)
+
+
+        # こうかとん画像を右から左に高速で移動
+        koukaton_rect.x -= 10  # 移動速度
+        if koukaton_rect.right < 0:  # 左端に達したらリセットして右端に戻す
+            koukaton_rect.left = WIDTH
+        screen.blit(koukaton_img, koukaton_rect)
+
+        # 一定時間待機で放置メッセージ
+        elapsed_time = (pg.time.get_ticks() - timeout_start) / 1000
+        if elapsed_time > 20:  
+            pg.mixer.music.stop()  
+            pg.mixer.music.load("dededon.mp3")  
+            pg.mixer.music.play(-1)  
+
+            screen.fill((0, 0, 0)) 
+
+            large_font = pg.font.Font(font_path, 60)  
+
+            alert_text = large_font.render("放置してるな！？", True, (255, 0, 0))
+            alert_text_rect = alert_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(alert_text, alert_text_rect)
+            pg.display.flip()
+            pg.time.delay(5600)  
+
+            pg.quit()
+            sys.exit()
+
+
+        pg.display.flip()  # 画面更新
+
+        # イベント処理
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                pg.mixer.music.stop()  
+                waiting = False
+
+        clock.tick(60)  # フレームレートを60に制限
+
+#メイン関数
 def main():
     pg.display.set_caption("吸血鬼生存猪")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -288,29 +420,25 @@ def main():
     # プレイヤーと敵の初期化
     bird = Bird(3, (WIDTH // 2, HEIGHT // 2))
     bullets = pg.sprite.Group()
+    # 背景クラスのインスタンスを作成
+    haikei = Haikei('fig/haikei.jpg')
 
     
-
-    # 背景画像の読み込み
-    #background_image = pg.image.load('fig/pg_bg.jpg').convert()
-
-
     bullet_timer = 0
-
 
     # 敵の設定リスト
     base_enemy_settings = [
-    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 90},
-    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp": 100},
-    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp": 200},
-    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp": 150},
-    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp": 190},
-    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 140},
-    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 130},
+    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 20},
+    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp": 130},
+    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp": 70},
+    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp": 90},
+    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp": 110},
+    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 40},
+    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 80},
 ]
 
     enemies = []
-    for i in range(5):  # 敵の数を設定
+    for i in range(10):  # 敵の数を設定
         settings = random.choice(base_enemy_settings).copy()  # base_enemy_settingsから設定をランダムに選択
         settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT))  # ランダムな位置
         enemy = Enemy(**settings)  # 必要な引数をすべて渡してインスタンス生成
@@ -321,16 +449,17 @@ def main():
     all_sprites.add(bird)
     all_sprites.add(*enemies)
 
-    #enemy_manager = EnemyManager(all_sprites, enemies)
-
-
     en_bullets = pg.sprite.Group()
 
     start_time = pg.time.get_ticks()
 
+    show_rules(screen)  # ルール説明の呼び出し
+
+    countdown_font = pg.font.Font(None, 120)
+    countdown(screen, countdown_font)  # カウントダウンの呼び出し
+
     tmr = 0
     game_state = "playing"  # Track the game state
-
 
     while True:
         for event in pg.event.get():
@@ -343,6 +472,10 @@ def main():
                         main()  # Restart the game
                     elif quit_button.collidepoint(mouse_pos):
                         return  # Quit the game
+        
+        haikei.update(bird.rect)
+
+        haikei.draw(screen)
 
         if game_state == "playing":
             # マウスの現在位置を取得
@@ -356,6 +489,13 @@ def main():
                 new_bullets = enemy.shoot(bird.rect.center, current_time, en_bullets)
                 en_bullets.add(*new_bullets)
             
+            if len(enemies) < 7:
+                settings = random.choice(base_enemy_settings).copy() 
+                settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT)) 
+                enemy = Enemy(**settings) 
+                enemies.add(enemy) 
+                all_sprites.add(enemy)
+        
             # 1番近い敵を探す
             if enemies:
                 closest_enemy = min(enemies, key=lambda e: math.hypot(e.rect.centerx - bird.rect.centerx, e.rect.centery - bird.rect.centery))
@@ -372,6 +512,7 @@ def main():
                     xp.value += 50
                     if xp.value >= 100:
                         bird.recover_hp()
+                        Bullet.default_damage += 10
                         xp.value = 0
 
             # 主人公が敵に接触した時ときのダメージ
@@ -379,28 +520,18 @@ def main():
                 bird.take_damage()
                 if bird.hp <= 0:
                     game_state = "gameover"                   
-                    #game_over_time = pg.time.get_ticks()  # ゲームオーバー時刻を記録
 
             # 更新処理
-            screen.fill((50, 50, 50))  # 画面の更新
             mouse_pos = pg.mouse.get_pos()
             bird.update(mouse_pos, en_bullets)
             enemies.update(bird.rect.center)
             en_bullets.update()
-            screen.fill((50, 50, 50))
             all_sprites.draw(screen)
             en_bullets.draw(screen)
-            #enemy_manager.update()
             bullet_timer -= 1
  
             elapsed_time = (pg.time.get_ticks() - start_time) / 1000 # 秒単位に変換 
-            time_text = font.render(f"Time: {elapsed_time:.2f}", True, (255, 255, 255))
-
-            # 画面の更新
-            #screen.fill((50, 50, 50))
-            # 背景をループ表示
-            # for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
-            #     screen.blit(background_image, (x, 0))
+            time_text = font.render(f"Time: {elapsed_time:.2f}", True, (0, 0, 139))
             
             all_sprites.draw(screen)
             bullets.update()
@@ -408,8 +539,12 @@ def main():
             screen.blit(time_text, (10, 50))
 
             #  HP
-            hp_text = font.render(f"HP: {bird.hp}", True, (0, 255, 255))
+            hp_text = font.render(f"HP: {bird.hp}", True, (0, 0, 139))
             screen.blit(hp_text, (10, 10))
+
+            # 攻撃力表示
+            atk_txt = font.render(f"ATK: {Bullet.default_damage}", True, (255, 255, 0))
+            screen.blit(atk_txt, (WIDTH - atk_txt.get_width() - 10, 10))
 
             xp.update(screen)
         elif game_state == "gameover":
@@ -440,8 +575,6 @@ def main():
         pg.display.update()
         tmr += 1        
         clock.tick(60)  # FPS:60
-
-
 
 if __name__ == "__main__":
     pg.init()
