@@ -46,44 +46,37 @@ class Bird(pg.sprite.Sprite):
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
-#背景の表示：連続画像を100×100で表示
+
+#背景を無限生成
 class Haikei:
     """
     背景に関するクラス
     """
     def __init__(self, image_path):
         self.image = pg.image.load(image_path).convert()
+        self.background_width, self.background_height = self.image.get_size()
         self.background_x = 0
         self.background_y = 0
 
     def update(self, bird_rect):
         # 背景の移動量を計算
         dx, dy = bird_rect.centerx - WIDTH // 2, bird_rect.centery - HEIGHT // 2
-        distance = math.hypot(dx, dy)
-
-        if distance > 0:
-            dx /= distance
-            dy /= distance
-            move_speed = 5
-            self.background_x -= dx * (move_speed / 5)  # 背景の移動を調整
-            self.background_y -= dy * (move_speed / 5)  # 背景の移動を調整
-
-        # 背景の移動に応じた制限
-        if bird_rect.centerx < WIDTH * 0.45:
-            self.background_x += 3  # 左端に近づいたら背景を右に
-        elif bird_rect.centerx > WIDTH * 0.55:
-            self.background_x -= 3  # 右端に近づいたら背景を左に
-
-        if bird_rect.centery < HEIGHT * 0.45:
-            self.background_y += 3  # 上端に近づいたら背景を下に
-        elif bird_rect.centery > HEIGHT * 0.55:
-            self.background_y -= 3  # 下端に近づいたら背景を上に
+        self.background_x -= dx * 0.015  # 0.1は移動のスムーズさを調整する係数
+        self.background_y -= dy * 0.015
 
     def draw(self, screen):
-        # 背景のループ表示
-        for x in range(-100, 100):
-            for y in range(-100, 100):
-                screen.blit(self.image, (x * 1000 + self.background_x, y * 1000 + self.background_y))
+        # キャラクター周辺の背景を無限に繰り返し表示
+        offset_x = self.background_x % self.background_width
+        offset_y = self.background_y % self.background_height
+
+        # 背景をタイル状に配置し、キャラクターの周囲に表示
+        start_x = int(-self.background_width + offset_x)
+        start_y = int(-self.background_height + offset_y)
+
+        for x in range(start_x, WIDTH, self.background_width):
+            for y in range(start_y, HEIGHT, self.background_height):
+                screen.blit(self.image, (x, y))
+
 
 #メイン関数
 def main():
