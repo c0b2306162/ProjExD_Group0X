@@ -134,7 +134,7 @@ class Enemy(pg.sprite.Sprite):
         return False
     
     def hit(self):
-        self.en_hp -= 1
+        self.en_hp -= Bullet.default_damage
         if self.en_hp <= 0:
             self.kill()
             return ExpOrb(self.rect.center)
@@ -202,11 +202,13 @@ class En_Bullet(pg.sprite.Sprite):
 
 # こうかとんの攻撃方法を管理するクラス
 class Bullet(pg.sprite.Sprite):
+    default_damage = 10
     def __init__(self, pos, target_pos) -> None:
         super().__init__()
         self.image = pg.Surface((10, 10), pg.SRCALPHA) 
         pg.draw.circle(self.image, (0, 255, 255), (5, 5), 5)
         self.rect = self.image.get_rect(center=pos)  # 弾の初期位置を設定
+        self.damage = Bullet.default_damage
 
         # ターゲットへの距離の計算
         dx, dy = target_pos[0] - pos[0], target_pos[1] - pos[1]
@@ -238,38 +240,10 @@ class ExpOrb(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
         self.value = 10
 
-#敵の再出現を管理するクラス
-# class EnemyManager:
-#     def __init__(self, all_sprites, enemies, respawn_time=300) -> None:
-#         self.all_sprites = all_sprites
-#         self.enemies = enemies
-#         self.respawn_time = respawn_time #　復活するまでのフレーム数
-#         self.respawn_timer = []
-
-#     def update(self):
-#         #敵の再出現を管理
-#         for idx, timer in enumerate(self.respawn_timer):
-#             self.respawn_timer[idx] -= 1
-#             if self.respawn_timer[idx] <= 0:
-#                 self.respawn_timer.pop(idx)
-#                 self.spawn_enemy()
-#         #敵の数を5～7体に保つ
-#         if len(self.enemies) < 5:
-#             self.spawn_enemy()
-
-    # def spawn_enemy(self):
-    #     enemy = Enemy((random.randint(0, WIDTH), random.randint(0, HEIGHT)))
-    #     self.enemies.add(enemy)
-    #     self.all_sprites.add(enemy)
-
-    # def schedule_respawn(self):
-    #     if len(self.enemies) < 7:
-    #         self.respawn_timer.append(self.respawn_time)
-
 class Xp():
     def __init__(self, value =0):
         self.font = pg.font.Font(None, 80)  # Use a custom game-like font
-        self.color = (255, 255, 255)
+        self.color = (0, 0, 139)
         self.value = value
         self.image = self.font.render(f"xp: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
@@ -435,7 +409,6 @@ def show_rules(screen: pg.Surface):
 
         clock.tick(60)  # フレームレートを60に制限
 
-
 #メイン関数
 def main():
     pg.display.set_caption("吸血鬼生存猪")
@@ -451,22 +424,17 @@ def main():
     haikei = Haikei('fig/haikei.jpg')
 
     
-    # 背景画像の読み込み
-    #background_image = pg.image.load('fig/pg_bg.jpg').convert()
-
-
     bullet_timer = 0
-
 
     # 敵の設定リスト
     base_enemy_settings = [
-    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 90},
-    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp": 100},
-    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp": 200},
-    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp": 150},
-    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp": 190},
-    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 140},
-    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 130},
+    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 20},
+    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp": 130},
+    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp": 70},
+    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp": 90},
+    {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp": 110},
+    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 40},
+    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 80},
 ]
 
     enemies = []
@@ -481,9 +449,6 @@ def main():
     all_sprites.add(bird)
     all_sprites.add(*enemies)
 
-    #enemy_manager = EnemyManager(all_sprites, enemies)
-
-
     en_bullets = pg.sprite.Group()
 
     start_time = pg.time.get_ticks()
@@ -493,11 +458,8 @@ def main():
     countdown_font = pg.font.Font(None, 120)
     countdown(screen, countdown_font)  # カウントダウンの呼び出し
 
-    
-
     tmr = 0
     game_state = "playing"  # Track the game state
-
 
     while True:
         for event in pg.event.get():
@@ -511,16 +473,9 @@ def main():
                     elif quit_button.collidepoint(mouse_pos):
                         return  # Quit the game
         
-        # マウスの現在位置を取得
-        # mouse_pos = pg.mouse.get_pos()
-        # こうかとんの更新
-        # bird.update(mouse_pos)
         haikei.update(bird.rect)
 
-        # 画面の更新
-        # scfreen.fill((50, 50, 50))
         haikei.draw(screen)
-        # all_sprites.draw(screen)
 
         if game_state == "playing":
             # マウスの現在位置を取得
@@ -534,6 +489,13 @@ def main():
                 new_bullets = enemy.shoot(bird.rect.center, current_time, en_bullets)
                 en_bullets.add(*new_bullets)
             
+            if len(enemies) < 7:
+                settings = random.choice(base_enemy_settings).copy() 
+                settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT)) 
+                enemy = Enemy(**settings) 
+                enemies.add(enemy) 
+                all_sprites.add(enemy)
+        
             # 1番近い敵を探す
             if enemies:
                 closest_enemy = min(enemies, key=lambda e: math.hypot(e.rect.centerx - bird.rect.centerx, e.rect.centery - bird.rect.centery))
@@ -550,6 +512,7 @@ def main():
                     xp.value += 50
                     if xp.value >= 100:
                         bird.recover_hp()
+                        Bullet.default_damage += 10
                         xp.value = 0
 
             # 主人公が敵に接触した時ときのダメージ
@@ -557,28 +520,18 @@ def main():
                 bird.take_damage()
                 if bird.hp <= 0:
                     game_state = "gameover"                   
-                    #game_over_time = pg.time.get_ticks()  # ゲームオーバー時刻を記録
 
             # 更新処理
-            # screen.fill((50, 50, 50))  # 画面の更新
             mouse_pos = pg.mouse.get_pos()
             bird.update(mouse_pos, en_bullets)
             enemies.update(bird.rect.center)
             en_bullets.update()
-            # screen.fill((50, 50, 50))
             all_sprites.draw(screen)
             en_bullets.draw(screen)
-            #enemy_manager.update()
             bullet_timer -= 1
  
             elapsed_time = (pg.time.get_ticks() - start_time) / 1000 # 秒単位に変換 
-            time_text = font.render(f"Time: {elapsed_time:.2f}", True, (255, 255, 255))
-
-            # 画面の更新
-            #screen.fill((50, 50, 50))
-            # 背景をループ表示
-            # for x in range(-WIDTH, WIDTH * 2, background_image.get_width()):
-            #     screen.blit(background_image, (x, 0))
+            time_text = font.render(f"Time: {elapsed_time:.2f}", True, (0, 0, 139))
             
             all_sprites.draw(screen)
             bullets.update()
@@ -586,8 +539,12 @@ def main():
             screen.blit(time_text, (10, 50))
 
             #  HP
-            hp_text = font.render(f"HP: {bird.hp}", True, (0, 255, 255))
+            hp_text = font.render(f"HP: {bird.hp}", True, (0, 0, 139))
             screen.blit(hp_text, (10, 10))
+
+            # 攻撃力表示
+            atk_txt = font.render(f"ATK: {Bullet.default_damage}", True, (255, 255, 0))
+            screen.blit(atk_txt, (WIDTH - atk_txt.get_width() - 10, 10))
 
             xp.update(screen)
         elif game_state == "gameover":
@@ -618,8 +575,6 @@ def main():
         pg.display.update()
         tmr += 1        
         clock.tick(60)  # FPS:60
-
-
 
 if __name__ == "__main__":
     pg.init()
