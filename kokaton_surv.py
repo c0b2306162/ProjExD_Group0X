@@ -110,7 +110,7 @@ def show_rules(screen: pg.Surface):
 
         # 一定時間待機で放置メッセージ
         elapsed_time = (pg.time.get_ticks() - timeout_start) / 1000
-        if elapsed_time > 5:  
+        if elapsed_time > 20:  
             pg.mixer.music.stop()  
             pg.mixer.music.load("dededon.mp3")  
             pg.mixer.music.play(-1)  
