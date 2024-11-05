@@ -47,6 +47,10 @@ class Bird(pg.sprite.Sprite):
             self.rect.centery += dy * 5
 
 def show_rules(screen: pg.Surface):
+    # BGM
+    pg.mixer.music.load("setumei.mp3")
+    pg.mixer.music.play(-1)  # ループ
+    
     # フォントを読み込む
     font_path = "font/ipaexg.ttf"  # プロジェクトフォルダに配置したフォントファイル
     font = pg.font.Font(font_path, 30)  # フォントサイズ30で指定
@@ -69,7 +73,7 @@ def show_rules(screen: pg.Surface):
     blink_timer = 0  # 点滅用のタイマー
 
     while waiting:
-        screen.fill((0, 0, 0))  # 背景を黒で塗りつぶし
+        screen.fill((255, 180, 100))  
 
         # 各テキストを描画
         for i, text in enumerate(rules_texts[:-1]):  # 最後のテキスト以外を表示
