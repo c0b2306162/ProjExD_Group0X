@@ -4,6 +4,7 @@ import pygame as pg
 import random
 import math
 import time
+import colorsys
 
 # ゲームの初期設定
 WIDTH, HEIGHT = 1200, 600
@@ -339,6 +340,101 @@ def countdown(screen: pg.Surface, font: pg.font.Font):
 
         pg.display.flip()  # 画面更新
         time.sleep(0.5)  # 1秒待機
+def rainbow_color(index, max_index):
+    """虹色のカラーを取得する関数"""
+    hue = index / max_index
+    r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
+    return (r, g, b)
+
+def show_rules(screen: pg.Surface):
+    # BGM
+    pg.mixer.music.load("setumei.mp3")
+    pg.mixer.music.set_volume(0.5)  # 音量を50%に設定
+    pg.mixer.music.play(-1)  # ループ再生
+
+    # フォントを読み込む
+    font_path = "font/ipaexg.ttf"  # プロジェクトフォルダに配置したフォントファイル
+    font = pg.font.Font(font_path, 30)  # フォントサイズ30で指定
+    
+    # ルールテキストを設定
+    rules_texts = [
+        "吸血鬼生存猪のルール説明",
+        "1. マウスを使ってこうかとんを動かします。",
+        "2. 敵に当たらないよう注意して、", 
+        "経験値を獲得しましょう！！",
+        "エンターキーを押してカウントダウンを開始します。"  # 最後のテキスト
+    ]
+    
+    # こうかとん画像の読み込みと初期位置設定
+    koukaton_img = pg.image.load("fig/2.png")
+    koukaton_rect = koukaton_img.get_rect(midright=(WIDTH, HEIGHT // 2 - 100))  # 少し上に調整
+
+    # エンターキーが押されるまでループ
+    waiting = True
+    clock = pg.time.Clock()  # フレームレート管理用のクロック
+    blink_timer = 0  # 点滅用のタイマー
+    timeout_start = pg.time.get_ticks()  # 開始時刻の取得
+
+    while waiting:
+        screen.fill((255, 180, 100))  
+
+        # 各テキストを虹色で描画
+        for i, text in enumerate(rules_texts[:-1]):  # 最後のテキスト以外を表示
+            color = rainbow_color(i, len(rules_texts) - 1)
+            render_text = font.render(text, True, color)
+            text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 50))
+            screen.blit(render_text, text_rect)
+
+        # 点滅するテキストの処理
+        blink_timer += 1
+        if blink_timer % 60 < 30:  # 60フレームごとに15フレーム点灯
+            last_text = rules_texts[-1]
+            last_color = (255, 0, 0)  # 赤色
+            render_last_text = font.render(last_text, True, last_color)
+            last_text_rect = render_last_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + (len(rules_texts) - 1) * 50))
+            screen.blit(render_last_text, last_text_rect)
+
+
+        # こうかとん画像を右から左に高速で移動
+        koukaton_rect.x -= 10  # 移動速度
+        if koukaton_rect.right < 0:  # 左端に達したらリセットして右端に戻す
+            koukaton_rect.left = WIDTH
+        screen.blit(koukaton_img, koukaton_rect)
+
+        # 一定時間待機で放置メッセージ
+        elapsed_time = (pg.time.get_ticks() - timeout_start) / 1000
+        if elapsed_time > 20:  
+            pg.mixer.music.stop()  
+            pg.mixer.music.load("dededon.mp3")  
+            pg.mixer.music.play(-1)  
+
+            screen.fill((0, 0, 0)) 
+
+            large_font = pg.font.Font(font_path, 60)  
+
+            alert_text = large_font.render("放置してるな！？", True, (255, 0, 0))
+            alert_text_rect = alert_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(alert_text, alert_text_rect)
+            pg.display.flip()
+            pg.time.delay(5600)  
+
+            pg.quit()
+            sys.exit()
+
+
+        pg.display.flip()  # 画面更新
+
+        # イベント処理
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                pg.mixer.music.stop()  
+                waiting = False
+
+        clock.tick(60)  # フレームレートを60に制限
+
 
 #メイン関数
 def main():
@@ -392,8 +488,12 @@ def main():
 
     start_time = pg.time.get_ticks()
 
+    show_rules(screen)  # ルール説明の呼び出し
+
     countdown_font = pg.font.Font(None, 120)
     countdown(screen, countdown_font)  # カウントダウンの呼び出し
+
+    
 
     tmr = 0
     game_state = "playing"  # Track the game state
