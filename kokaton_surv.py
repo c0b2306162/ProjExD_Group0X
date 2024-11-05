@@ -312,6 +312,32 @@ class Haikei:
             for y in range(start_y, HEIGHT, self.background_height):
                 screen.blit(self.image, (x, y))
 
+def countdown(screen: pg.Surface, font: pg.font.Font):
+    # カウントダウンのテキストと対応する画像を設定
+    countdown_texts = ["3", "2", "1", "Start!"]
+    countdown_images = [
+        pg.image.load("fig/0.png"),  # 3の画像
+        pg.image.load("fig/2.png"),  # 2の画像
+        pg.image.load("fig/3.png"),  # 1の画像
+        pg.image.load("fig/9.png")  # Startの画像
+    ]
+
+    for i, text in enumerate(countdown_texts):
+        screen.fill((0, 0, 0))  # 背景を黒にしてリセット
+        
+        # テキストを描画
+        render_text = font.render(text, True, (255, 255, 255))
+        text_rect = render_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(render_text, text_rect)
+
+        # 対応する画像を描画
+        #image = pg.transform.scale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image = pg.transform.smoothscale(countdown_images[i], (200, 200))  # 画像のサイズを調整
+        image_rect = image.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))  # 画像の位置を調整
+        screen.blit(image, image_rect)
+
+        pg.display.flip()  # 画面更新
+        time.sleep(0.5)  # 1秒待機
 
 #メイン関数
 def main():
@@ -364,6 +390,9 @@ def main():
     en_bullets = pg.sprite.Group()
 
     start_time = pg.time.get_ticks()
+
+    countdown_font = pg.font.Font(None, 120)
+    countdown(screen, countdown_font)  # カウントダウンの呼び出し
 
     tmr = 0
     game_state = "playing"  # Track the game state
