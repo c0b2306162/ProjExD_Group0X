@@ -46,7 +46,7 @@ class Bird(pg.sprite.Sprite):
             self.rect.centerx += dx * 5  # スピード調整
             self.rect.centery += dy * 5
 
-
+#背景の表示：連続画像を100×100で表示
 class Haikei:
     """
     背景に関するクラス
