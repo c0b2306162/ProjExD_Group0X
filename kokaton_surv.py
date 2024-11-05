@@ -276,9 +276,6 @@ def main():
             hp_text = font.render(f"HP: {bird.hp}", True, (255, 255, 255))
             screen.blit(hp_text, (10, 10))
 
-            txt = font.render(str(tmr), True, (255, 255, 255))
-            screen.blit(txt, [300, 200])
-
         elif game_state == "gameover":
             # game over 画面
             gameover_text = font.render("GAME OVER", True, (255, 0, 0))
