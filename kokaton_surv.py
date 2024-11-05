@@ -10,7 +10,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # ゲームキャラクター（主人公、敵、弾、経験値）に関するクラス
 class Bird(pg.sprite.Sprite):
-    def __init__(self, num: int, xy: tuple[int, int]):
+    def __init__(self, num: int, xy: tuple[int, int]) -> None:
         """
         引数１ num:こうかとん画像ファイル名の番号
         引数２ xy:こうかとん画像の位置座標タプル
@@ -38,12 +38,6 @@ class Bird(pg.sprite.Sprite):
 
 
     def update(self, mousu_pos):
-        # dx, dy = mousu_pos[0] - self.rect.centerx, mousu_pos[1] - self.rect.centery
-        # distance = math.hypot(dx, dy)
-        # if distance > 0:
-        #     dx, dy = dx / distance, dy / distance
-        #     self.rect.centerx += dx * self.speed
-        #     self.rect.centery += dy * self.speed
         # マウスの方向に移動
         mousu_pos = pg.mouse.get_pos()
         dx, dy = mousu_pos[0] - self.rect.centerx, mousu_pos[1] - self.rect.centery
@@ -87,8 +81,13 @@ class Bird(pg.sprite.Sprite):
             print("Game Over")
             self.kill()
 
+# 敵を管理するクラス
 class Enemy(pg.sprite.Sprite):
-    def __init__(self, xy: tuple[int, int]):
+    def __init__(self, xy: tuple[int, int]) -> None:
+        """
+        敵の処理に関するクラス
+        引数１ xy:敵の生成される座標
+        """
         super().__init__()
         self.image = pg.Surface((40, 40), pg.SRCALPHA)
         pg.draw.circle(self.image, (255, 0, 0), (20, 20), 20)
@@ -111,8 +110,14 @@ class Enemy(pg.sprite.Sprite):
             return ExpOrb(self.rect.center)
         return None
 
+# こうかとんの攻撃方法を管理するクラス
 class Bullet(pg.sprite.Sprite):
-    def __init__(self, pos, target_pos):
+    def __init__(self, pos, target_pos) -> None:
+        """
+        こうかとんの攻撃方法に関するクラス
+        引数１ pos:弾の初期位置の座標
+        引数２ target_pos:ターゲットのxy座標
+        """
         super().__init__()
         self.image = pg.Surface((10, 10), pg.SRCALPHA) 
         pg.draw.circle(self.image, (0, 255, 255), (5, 5), 5)
@@ -132,8 +137,13 @@ class Bullet(pg.sprite.Sprite):
         if not (0 <= self.rect.x <= WIDTH and 0 <= self.rect.y <= HEIGHT):
             self.kill() #spriteグループから削除
 
+# 敵が落とす経験値の玉を管理するクラス
 class ExpOrb(pg.sprite.Sprite):
-    def __init__(self, pos):
+    def __init__(self, pos) -> int:
+        """
+        経験値に関するクラス
+        引数１ pos:経験値玉の落下する座標
+        """
         super().__init__()
         self.image = pg.Surface((15, 15), pg.SRCALPHA)
         pg.draw.circle(self.image, (0, 255, 0), (7, 7), 7)
@@ -142,7 +152,7 @@ class ExpOrb(pg.sprite.Sprite):
 
 #敵の再出現を管理するクラス
 class EnemyManager:
-    def __init__(self, all_sprites, enemies, respawn_time=300):
+    def __init__(self, all_sprites, enemies, respawn_time=300) -> None:
         self.all_sprites = all_sprites
         self.enemies = enemies
         self.respawn_time = respawn_time #　復活するまでのフレーム数
