@@ -5,7 +5,7 @@ import random
 import math
 
 # ゲームの初期設定
-WIDTH, HEIGHT = 1400, 800
+WIDTH, HEIGHT = 1200, 600
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # ゲームキャラクター（主人公、敵、弾、経験値）に関するクラス
@@ -278,6 +278,42 @@ class Xp():
         screen.blit(self.image, self.rect)
 
 # ゲームのメインループ
+#背景を無限生成
+class Haikei:
+    """
+    背景に関するクラス
+    """
+    def __init__(self, image_path):
+        """
+        背景画像の読み込み
+        初期位置の設定
+        """
+        self.image = pg.image.load(image_path).convert()
+        self.background_width, self.background_height = self.image.get_size()
+        self.background_x = 0
+        self.background_y = 0
+
+    def update(self, bird_rect):
+        # 背景の移動量を計算
+        dx, dy = bird_rect.centerx - WIDTH // 2, bird_rect.centery - HEIGHT // 2
+        self.background_x -= dx * 0.015  # 0.1は移動のスムーズさを調整する係数
+        self.background_y -= dy * 0.015
+
+    def draw(self, screen):
+        # キャラクター周辺の背景を無限に繰り返し表示
+        offset_x = self.background_x % self.background_width
+        offset_y = self.background_y % self.background_height
+
+        # 背景をタイル状に配置し、キャラクターの周囲に表示
+        start_x = int(-self.background_width + offset_x)
+        start_y = int(-self.background_height + offset_y)
+
+        for x in range(start_x, WIDTH, self.background_width):
+            for y in range(start_y, HEIGHT, self.background_height):
+                screen.blit(self.image, (x, y))
+
+
+#メイン関数
 def main():
     pg.display.set_caption("吸血鬼生存猪")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -288,9 +324,10 @@ def main():
     # プレイヤーと敵の初期化
     bird = Bird(3, (WIDTH // 2, HEIGHT // 2))
     bullets = pg.sprite.Group()
+    # 背景クラスのインスタンスを作成
+    haikei = Haikei('fig/haikei.jpg')
 
     
-
     # 背景画像の読み込み
     #background_image = pg.image.load('fig/pg_bg.jpg').convert()
 
@@ -310,7 +347,7 @@ def main():
 ]
 
     enemies = []
-    for i in range(5):  # 敵の数を設定
+    for i in range(10):  # 敵の数を設定
         settings = random.choice(base_enemy_settings).copy()  # base_enemy_settingsから設定をランダムに選択
         settings["xy"] = (random.randint(0, WIDTH), random.randint(0, HEIGHT))  # ランダムな位置
         enemy = Enemy(**settings)  # 必要な引数をすべて渡してインスタンス生成
@@ -343,6 +380,17 @@ def main():
                         main()  # Restart the game
                     elif quit_button.collidepoint(mouse_pos):
                         return  # Quit the game
+        
+        # マウスの現在位置を取得
+        # mouse_pos = pg.mouse.get_pos()
+        # こうかとんの更新
+        # bird.update(mouse_pos)
+        haikei.update(bird.rect)
+
+        # 画面の更新
+        # scfreen.fill((50, 50, 50))
+        haikei.draw(screen)
+        # all_sprites.draw(screen)
 
         if game_state == "playing":
             # マウスの現在位置を取得
@@ -382,12 +430,12 @@ def main():
                     #game_over_time = pg.time.get_ticks()  # ゲームオーバー時刻を記録
 
             # 更新処理
-            screen.fill((50, 50, 50))  # 画面の更新
+            # screen.fill((50, 50, 50))  # 画面の更新
             mouse_pos = pg.mouse.get_pos()
             bird.update(mouse_pos, en_bullets)
             enemies.update(bird.rect.center)
             en_bullets.update()
-            screen.fill((50, 50, 50))
+            # screen.fill((50, 50, 50))
             all_sprites.draw(screen)
             en_bullets.draw(screen)
             #enemy_manager.update()
