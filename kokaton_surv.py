@@ -3,6 +3,7 @@ import sys
 import pygame as pg
 import random
 import math
+import time
 
 # ゲームの初期設定
 WIDTH, HEIGHT = 1200, 600
