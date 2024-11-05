@@ -53,6 +53,10 @@ class Haikei:
     背景に関するクラス
     """
     def __init__(self, image_path):
+        """
+        背景画像の読み込み
+        初期位置の設定
+        """
         self.image = pg.image.load(image_path).convert()
         self.background_width, self.background_height = self.image.get_size()
         self.background_x = 0
