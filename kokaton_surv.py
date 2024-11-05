@@ -103,6 +103,7 @@ def show_rules(screen: pg.Surface):
                 sys.exit()
             if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
                 waiting = False
+                pg.mixer.music.stop()  # エンターキーが押されたらBGMを停止
 
         clock.tick(60)  # フレームレートを60に制限
 
