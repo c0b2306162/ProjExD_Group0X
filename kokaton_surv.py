@@ -428,13 +428,13 @@ def main():
 
     # 敵の設定リスト
     base_enemy_settings = [
-    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 20},
+    {"num": 10, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7000, "bullet_speed": 5, "shoot_pattern": "spread", "bullet_color": (255, 0, 0), "bullet_radius": 6, "speed": 1.342, "en_hp": 100},
     {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6700, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.000001, "en_hp": 130},
     {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 9500, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 1.059, "en_hp": 70},
     {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 7900, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 2.0, "en_hp": 90},
     {"num": 11, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 6200, "bullet_speed": 8, "shoot_pattern": "direct", "bullet_color": (75, 172, 0), "bullet_radius": 7, "speed": 1.67, "en_hp": 110},
-    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 40},
-    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 80},
+    {"num": 12, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 5400, "bullet_speed": 7, "shoot_pattern": "wave", "bullet_color": (0, 0, 255), "bullet_radius": 8, "speed": 2.3, "en_hp": 90},
+    {"num": 13, "xy": (random.randint(0, WIDTH), random.randint(0, HEIGHT)), "stop_distance": 0, "shoot_interval": 8700, "bullet_speed": 8, "shoot_pattern": "random", "bullet_color": (255, 174, 0), "bullet_radius": 6, "speed": 1.22, "en_hp": 800},
 ]
 
     enemies = []
