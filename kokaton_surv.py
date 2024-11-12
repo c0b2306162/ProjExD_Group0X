@@ -469,9 +469,10 @@ def main():
                 if game_state == "gameover":
                     mouse_pos = event.pos
                     if restart_button.collidepoint(mouse_pos):
-                        main()  # Restart the game
+                        Bullet.default_damage = 10
+                        main() # Restart the game
                     elif quit_button.collidepoint(mouse_pos):
-                        return  # Quit the game
+                        return
         
         haikei.update(bird.rect)
 
